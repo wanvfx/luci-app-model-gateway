@@ -1,0 +1,61 @@
+<%
+local util = require "luci.util"
+local http = require "luci.http"
+local jsonc = require "luci.jsonc"
+
+local function fetch_status()
+    local uci = require "luci.model.uci".cursor()
+    local port = uci:get("model-gateway", "settings", "port") or "8080"
+    local host = "http://127.0.0.1:" .. port
+
+    local output = util.trim(util.exec("curl -s " .. host .. "/api/config"))
+    if output == "" then
+        return nil, "服务未启动或无法连接"
+    end
+
+    local data = jsonc.parse(output)
+    return data, nil
+end
+
+local status, err = fetch_status()
+-%>
+<div class="cbi-value">
+    <label class="cbi-value-title"><%:Service Status%></label>
+    <div class="cbi-value-field">
+        <% if status then %>
+        <button class="cbi-button cbi-button-success" disabled="true"><%:Model Gateway is running%></button>
+        <% else %>
+        <button class="cbi-button cbi-button-negative" disabled="true"><%:Model Gateway is not running%> (<%=err%>)</button>
+        <% end %>
+    </div>
+</div>
+
+<% if status then %>
+<div class="cbi-value">
+    <label class="cbi-value-title"><%:Port%></label>
+    <div class="cbi-value-field">
+        <%=status.port or "8080"%>
+    </div>
+</div>
+
+<div class="cbi-value">
+    <label class="cbi-value-title"><%:Admin Key%></label>
+    <div class="cbi-value-field">
+        <%=status.admin_key or "auto-generated"%>
+    </div>
+</div>
+
+<div class="cbi-value">
+    <label class="cbi-value-title"><%:Poll Interval%></label>
+    <div class="cbi-value-field">
+        <%=status.poll_interval or "300"%> <%:seconds%>
+    </div>
+</div>
+
+<div class="cbi-value">
+    <label class="cbi-value-title"><%:Open Web UI%></label>
+    <div class="cbi-value-field">
+        <input type="button" class="btn cbi-button cbi-button-apply" value="<%:Open%>" onclick="window.open('<%=status.port and ("http://"+util.trim(util.exec("uci get network.lan.ipaddr 2>/dev/null || echo 192.168.100.1")) .. ":" .. status.port) or ""%>', '_blank')">
+    </div>
+</div>
+<% end %>

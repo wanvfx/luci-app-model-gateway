@@ -1,0 +1,10 @@
+Package: luci-app-model-gateway
+Version: 1.0.0-r20260726z
+Architecture: all
+Section: luci
+Priority: optional
+Maintainer: linkease
+License: MIT
+Source: luci-app-model-gateway
+Depends: luci-base
+Description: Model Gateway - OpenAI compatible API proxy for iStoreOS/OpenWrt.

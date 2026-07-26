@@ -1,0 +1,13 @@
+#!/bin/sh
+# 安装/升级后：尊重 UCI 的 enable 标志，不强制自启。
+# 未启用（enable!=1）：保持停止、不建开机自启软链，避免“装完就跑”。
+# 已启用（enable=1，通常是升级时保留的用户配置）：拉起并建软链。
+[ -z "$IPKG_INSTROOT" ] || exit 0
+if [ "$(uci -q get model-gateway.settings.enable 2>/dev/null)" = "1" ]; then
+    /etc/init.d/model-gateway enable >/dev/null 2>&1
+    /etc/init.d/model-gateway restart >/dev/null 2>&1
+else
+    /etc/init.d/model-gateway disable >/dev/null 2>&1
+    /etc/init.d/model-gateway stop >/dev/null 2>&1
+fi
+exit 0

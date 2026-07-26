@@ -1,0 +1,76 @@
+#!/bin/sh /etc/rc.common
+
+START=99
+USE_PROCD=1
+
+# Detect architecture and use the appropriate binary
+ARCH=$(uname -m)
+case "$ARCH" in
+    x86_64|amd64)
+        PROG=/usr/bin/model-gatewayd
+        ;;
+    aarch64|arm64)
+        PROG=/usr/bin/model-gatewayd-arm64
+        ;;
+    *)
+        PROG=/usr/bin/model-gatewayd
+        ;;
+esac
+
+# 动态读取配置路径（支持外部存储 / 自定义路径）
+# UCI 配置本身可能是一个 symlink → /etc/config/model-gateway 指向真实位置
+DEFAULT_CONF=/etc/config/model-gateway
+CONFIG_PATH=$(uci get model-gateway.settings.config_path 2>/dev/null)
+
+if [ -n "$CONFIG_PATH" ] && [ -d "$CONFIG_PATH" ]; then
+    CONF="$CONFIG_PATH/model-gateway"
+    DATA_DIR="$CONFIG_PATH/data"
+    # 确保配置文件存在（可能首次迁移尚未完成）
+    if [ ! -f "$CONF" ]; then
+        # 回退到默认位置
+        logger -t model-gateway "config_path '$CONFIG_PATH' 不可用（配置文件缺失），回退默认路径 $DEFAULT_CONF"
+        CONF="$DEFAULT_CONF"
+        DATA_DIR="/var/lib/model-gateway"
+    fi
+else
+    if [ -n "$CONFIG_PATH" ]; then
+        logger -t model-gateway "config_path '$CONFIG_PATH' 不可用（目录不存在，可能外部存储未挂载），回退默认路径 $DEFAULT_CONF"
+    fi
+    CONF="$DEFAULT_CONF"
+    DATA_DIR="/var/lib/model-gateway"
+fi
+
+# 确保数据目录存在
+mkdir -p "$DATA_DIR"
+
+start_service() {
+    # 尊重"启用服务"开关：未启用时直接返回、不开实例。
+    # 这是开机自启（S 软链）场景的兜底守卫，避免 enable=0 时把服务拉起。
+    # 运行时启停统一由 LuCI CBI 的 on_after_commit -> apply_service 控制，
+    # 因此此处不再注册 procd_set_param file 监视，避免 uci apply 触发 procd 自动
+    # reload 与 apply_service 的 restart 互相抢跑（会导致状态滞后一次 apply）。
+    local enabled
+    enabled=$(uci get model-gateway.settings.enable 2>/dev/null)
+    [ "$enabled" = "1" ] || return 0
+
+    procd_open_instance
+    procd_set_param command "$PROG" -c "$CONF"
+    procd_set_param respawn
+    procd_set_param stdout 1
+    procd_set_param stderr 1
+    procd_set_param env "MODEL_GATEWAY_DATA=$DATA_DIR"
+    procd_close_instance
+}
+
+status() {
+    if pidof model-gatewayd model-gatewayd-arm64 >/dev/null 2>&1; then
+        echo "running"
+        return 0
+    fi
+    echo "stopped"
+    return 3
+}
+
+stop() {
+    stop_service
+}

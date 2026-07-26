@@ -1,0 +1,14 @@
+{
+	"luci-app-model-gateway": {
+		"description": "Grant UCI + exec access for luci-app-model-gateway",
+		"read": {
+			"uci": [ "model-gateway" ]
+		},
+		"write": {
+			"uci": [ "model-gateway" ]
+		},
+		"execute": {
+			"file": [ "*" ]
+		}
+	}
+}

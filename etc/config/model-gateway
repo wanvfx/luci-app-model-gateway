@@ -1,0 +1,8 @@
+config model-gateway 'settings'
+    option enable '0'
+    option port '12211'
+    option admin_key 'AUTO_GENERATED_ON_FIRST_BOOT'
+    option poll_interval '300'
+    option poll_strategy 'limited'
+    option headless '1'
+    option vision_router ''

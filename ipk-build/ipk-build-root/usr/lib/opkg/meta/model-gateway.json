@@ -1,0 +1,19 @@
+{
+  "app_name": "model-gateway",
+  "title": {
+    "en": "Model Gateway",
+    "zh": "模型网关"
+  },
+  "description": {
+    "en": "An OpenAI-compatible AI model gateway that aggregates free quotas from multiple providers (NVIDIA, SenseNova, ModelScope, Gemini, etc.) into one endpoint with automatic failover and quality-based routing.",
+    "zh": "一个 OpenAI 兼容的 AI 模型网关，把 NVIDIA、商汤、魔搭、Gemini 等多个平台的免费额度聚合成统一接口，支持自动故障转移与基于质量/延迟的加权路由。"
+  },
+  "category": "工具",
+  "subcategory": "AI",
+  "icon": "",
+  "arch": ["amd64", "arm64"],
+  "port": 12211,
+  "type": "native",
+  "maintainer": "Zoyaya",
+  "homepage": "https://github.com/wanvfx/luci-app-model-gateway"
+}

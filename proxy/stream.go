@@ -1,0 +1,314 @@
+package proxy
+
+import (
+	"bufio"
+	"encoding/json"
+	"fmt"
+	"io"
+	"net/http"
+	"strings"
+	"time"
+
+	"github.com/wanvfx/luci-app-model-gateway/calllog"
+	"github.com/wanvfx/luci-app-model-gateway/config"
+	"github.com/wanvfx/luci-app-model-gateway/engine"
+	"github.com/wanvfx/luci-app-model-gateway/storage"
+)
+
+// streamResult 流式转发结果（用于续写判断）
+type streamResult struct {
+	accumulated string // 累计收到的 content + reasoning_content
+	upstreamErr error
+	streamOK    bool // 流是否完整结束（收到 [DONE]）
+	totalTokens int  // 本次消耗的 token 总数（用于调用日志）
+}
+
+// streamFromUpstream 从单个上游流式转发
+func (s *Server) streamFromUpstream(w http.ResponseWriter, r *http.Request, req *ChatRequest, body []byte, candidate *engine.Candidate, prelude string) streamResult {
+	provider := candidate.Provider
+	if provider == nil {
+		return streamResult{upstreamErr: fmt.Errorf("no provider for model %s", candidate.Model)}
+	}
+
+	// 替换模型名（使用别名解析）
+	resolvedModel := s.meta.ResolveModel(candidate.Model)
+	reqBody := strings.Replace(string(body), req.Model, resolvedModel, 1)
+
+	// 注入 stream_options: {"include_usage": true}（确保上游在流中返回 usage）
+	reqBody = injectStreamOptions(reqBody)
+
+	// 创建上游请求
+	upstreamReq, err := http.NewRequestWithContext(r.Context(), http.MethodPost, provider.BaseURL+"/chat/completions", strings.NewReader(reqBody))
+	if err != nil {
+		return streamResult{upstreamErr: err}
+	}
+	upstreamReq.Header.Set("Content-Type", "application/json")
+	upstreamReq.Header.Set("Authorization", "Bearer "+provider.APIKey)
+	upstreamReq.Header.Set("Accept", "text/event-stream")
+
+	// 发送请求
+	resp, err := s.httpClient.Do(upstreamReq)
+	if err != nil {
+		return streamResult{upstreamErr: fmt.Errorf("upstream request failed: %w", err)}
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		errBody, _ := io.ReadAll(resp.Body)
+		return streamResult{upstreamErr: &UpstreamError{StatusCode: resp.StatusCode, Body: errBody}}
+	}
+
+	// 设置 SSE 头
+	w.Header().Set("Content-Type", "text/event-stream")
+	w.Header().Set("Cache-Control", "no-cache")
+	w.Header().Set("Connection", "keep-alive")
+	w.WriteHeader(http.StatusOK)
+
+	flusher, _ := w.(http.Flusher)
+
+	// 发送 vision prelude（如有）
+	if prelude != "" {
+		preludeObj := map[string]interface{}{
+			"choices": []map[string]interface{}{
+				{"delta": map[string]interface{}{"content": prelude}, "index": 0},
+			},
+		}
+		preludeBytes, _ := json.Marshal(preludeObj)
+		fmt.Fprintf(w, "data: %s\n\n", string(preludeBytes))
+		if flusher != nil {
+			flusher.Flush()
+		}
+	}
+
+	// 首 chunk 添加 🤖 provider · model 前缀
+	prefix := fmt.Sprintf("🤖 %s · %s\n\n", provider.Name, candidate.Model)
+	prefixSent := false
+
+	// 从流式 chunk 中提取 usage
+	var usageObj map[string]interface{}
+
+	// 累计内容（用于续写）
+	var accumulated strings.Builder
+
+	result := streamResult{streamOK: false}
+
+	// 使用 Scanner 逐行读取上游 SSE
+	// 默认 64KB 行上限会被大 chunk（长 reasoning/大响应）撑爆导致流中断，扩容到 10MB
+	scanner := bufio.NewScanner(resp.Body)
+	scanner.Buffer(make([]byte, 0, 1<<20), 10<<20)
+	for scanner.Scan() {
+		line := scanner.Text()
+		if !strings.HasPrefix(line, "data:") {
+			continue
+		}
+		data := strings.TrimPrefix(line, "data:")
+		data = strings.TrimSpace(data)
+
+		if data == "[DONE]" {
+			fmt.Fprint(w, "data: [DONE]\n\n")
+			if flusher != nil {
+				flusher.Flush()
+			}
+			result.streamOK = true
+			break
+		}
+
+		// 还原 Hermes 工具名
+		data = s.meta.RestoreHermesText(data)
+
+		// 解析 chunk：提取 usage、累加 content/reasoning_content、替换 model 字段
+		var parsed map[string]interface{}
+		if err := json.Unmarshal([]byte(data), &parsed); err == nil {
+			// 提取 usage
+			if u, ok := parsed["usage"].(map[string]interface{}); ok && u != nil {
+				usageObj = u
+			}
+
+			// 替换 model 字段（与 Python 原版 obj["model"] = provider·model 一致）
+			if _, ok := parsed["model"].(string); ok {
+				parsed["model"] = fmt.Sprintf("%s · %s", provider.Name, candidate.Model)
+			}
+
+			// 累加 content + reasoning_content（用于续写）
+			if choices, ok := parsed["choices"].([]interface{}); ok && len(choices) > 0 {
+				if choice, ok := choices[0].(map[string]interface{}); ok {
+					if delta, ok := choice["delta"].(map[string]interface{}); ok {
+						if c, ok := delta["content"].(string); ok {
+							accumulated.WriteString(c)
+						}
+						if rc, ok := delta["reasoning_content"].(string); ok {
+							accumulated.WriteString(rc)
+						}
+					}
+				}
+			}
+
+			// 首条 content 消息添加 🤖 前缀
+			if !prefixSent {
+				if choices, ok := parsed["choices"].([]interface{}); ok && len(choices) > 0 {
+					if choice, ok := choices[0].(map[string]interface{}); ok {
+						if delta, ok := choice["delta"].(map[string]interface{}); ok {
+							if content, ok := delta["content"].(string); ok && content != "" {
+								delta["content"] = prefix + content
+								prefixSent = true
+							}
+						}
+					}
+				}
+			}
+
+			dataBytes, _ := json.Marshal(parsed)
+			data = string(dataBytes)
+		}
+
+		fmt.Fprintf(w, "data: %s\n\n", data)
+		if flusher != nil {
+			flusher.Flush()
+		}
+	}
+
+	// 记录 usage
+	if usageObj != nil {
+		pt := 0
+		ct := 0
+		if v, ok := usageObj["prompt_tokens"].(float64); ok {
+			pt = int(v)
+		}
+		if v, ok := usageObj["completion_tokens"].(float64); ok {
+			ct = int(v)
+		}
+		s.recordStreamUsage(provider, candidate.Model, pt, ct)
+		result.totalTokens = pt + ct
+	}
+
+	if err := scanner.Err(); err != nil {
+		result.upstreamErr = err
+	}
+
+	result.accumulated = accumulated.String()
+	return result
+}
+
+// forwardStreamWithFailover 流式转发（带自动故障转移 + 续写）
+func (s *Server) forwardStreamWithFailover(w http.ResponseWriter, r *http.Request, req *ChatRequest, body []byte, candidates []*engine.Candidate, prelude string) {
+	maxAttempts := 1
+
+	accumulated := ""
+
+	for attempt := 0; attempt < maxAttempts; attempt++ {
+		for _, candidate := range candidates {
+			modelKey := candidate.Provider.Name + "||" + candidate.Model
+
+			// 如果有续写内容，注入续写提示（与 Python 原版一致）
+			requestBody := body
+			if accumulated != "" {
+				requestBody = injectContinuation(body, accumulated)
+			}
+
+			result := s.streamFromUpstream(w, r, req, requestBody, candidate, prelude)
+
+			if result.streamOK {
+				// 完整成功：记录熔断成功
+				s.circuits.RecordSuccess(modelKey)
+				calllog.Append(calllog.Entry{
+					Provider: candidate.Provider.Name,
+					Model:    candidate.Model,
+					Status:   "ok",
+					Tokens:   result.totalTokens,
+				})
+				return
+			}
+
+			if result.upstreamErr != nil {
+				// 失败：记录熔断失败
+				s.circuits.RecordFailure(modelKey)
+				errMsg := result.upstreamErr.Error()
+				if ue, ok := result.upstreamErr.(*UpstreamError); ok {
+					errMsg = fmt.Sprintf("HTTP %d", ue.StatusCode)
+				}
+				calllog.Append(calllog.Entry{
+					Provider: candidate.Provider.Name,
+					Model:    candidate.Model,
+					Status:   "fail",
+					Error:    errMsg,
+				})
+				// 累加已收到的内容（用于续写）
+				if result.accumulated != "" {
+					accumulated += result.accumulated
+				}
+				fmt.Printf("[stream] failover from %s (attempt %d): %v\n", modelKey, attempt, result.upstreamErr)
+				continue
+			}
+		}
+	}
+
+	// 全部候选均失败：对齐 Python 原版（app.py:1922），先推「回复中断」提示 delta，
+	// 再发送 [DONE]，避免用户看到一段「看似完整、实际被截断」的回答且无任何报错。
+	warn := map[string]interface{}{
+		"choices": []map[string]interface{}{
+			{"delta": map[string]interface{}{"content": "\n\n⚠️ 所有模型均失败，回复中断。"}, "index": 0},
+		},
+	}
+	warnBytes, _ := json.Marshal(warn)
+	fmt.Fprintf(w, "data: %s\n\n", string(warnBytes))
+	fmt.Fprint(w, "data: [DONE]\n\n")
+	if flusher, ok := w.(http.Flusher); ok {
+		flusher.Flush()
+	}
+}
+
+// injectStreamOptions 向请求体注入 stream_options: {"include_usage": true}
+func injectStreamOptions(body string) string {
+	var parsed map[string]interface{}
+	if err := json.Unmarshal([]byte(body), &parsed); err != nil {
+		return body
+	}
+	// 只在 stream=true 时注入
+	if stream, ok := parsed["stream"].(bool); !ok || !stream {
+		return body
+	}
+	parsed["stream_options"] = map[string]interface{}{
+		"include_usage": true,
+	}
+	out, _ := json.Marshal(parsed)
+	return string(out)
+}
+
+// injectContinuation 向请求体注入续写上下文（与 Python 原版一致）
+func injectContinuation(body []byte, accumulated string) []byte {
+	var parsed map[string]interface{}
+	if err := json.Unmarshal(body, &parsed); err != nil {
+		return body
+	}
+	msgs, ok := parsed["messages"].([]interface{})
+	if !ok {
+		return body
+	}
+	// 追加 assistant 已回复内容 + 用户续写请求
+	msgs = append(msgs, map[string]interface{}{
+		"role":    "assistant",
+		"content": accumulated,
+	})
+	msgs = append(msgs, map[string]interface{}{
+		"role":    "user",
+		"content": "请继续上面的回复，从中断处接着写。",
+	})
+	parsed["messages"] = msgs
+	out, _ := json.Marshal(parsed)
+	return out
+}
+
+// recordStreamUsage 记录流式请求的 usage
+func (s *Server) recordStreamUsage(provider *config.Provider, model string, promptTokens, completionTokens int) {
+	if s.usage == nil {
+		return
+	}
+	_ = s.usage.Append(storage.UsageRecord{
+		Time:             time.Now(),
+		Provider:         provider.Name,
+		Model:            model,
+		PromptTokens:     promptTokens,
+		CompletionTokens: completionTokens,
+		TotalTokens:      promptTokens + completionTokens,
+	})
+}
