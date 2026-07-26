@@ -15,11 +15,12 @@ OUTPUT_DIR = os.path.join(PROJECT_DIR, "ipk-build")
 os.makedirs(OUTPUT_DIR, exist_ok=True)
 
 PACKAGE = "luci-app-model-gateway"
-VERSION = "1.0.0-r20260726z"
-ARCH = "all"
+# 支持环境变量覆盖：CI 流水线用 tag 名自动注入版本号/架构
+VERSION = os.environ.get("IPK_VERSION", "1.0.0-r20260726z")
+ARCH = os.environ.get("IPK_ARCH", "all")
 SECTION = "luci"
 PRIORITY = "optional"
-MAINTAINER = "linkease"
+MAINTAINER = "Zoyaya"
 LICENSE = "MIT"
 DEPENDS = "luci-base"
 DESCRIPTION = "Model Gateway - OpenAI compatible API proxy for iStoreOS/OpenWrt."

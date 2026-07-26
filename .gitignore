@@ -46,7 +46,7 @@ test_req.json
 å°çº¢ä¹¦5å›¾ç”Ÿæˆå™¨.html
 å°çº¢ä¹¦ä¸“å±å°é¢.html
 
-# ´ò°ü²úÎï£¨ÓÉ go build Éú³É£¬ÎğÌá½»£©
+# ´ò°ü¶ş½øÖÆ£¨ÓÉ CI / go build Éú³É£¬ÎğÌá½»£©
 ipk-build/ipk-build-root/usr/bin/model-gatewayd
 ipk-build/ipk-build-root/usr/bin/model-gatewayd-arm64
 *.ipk

@@ -1,0 +1,66 @@
+name: Build and Release ipk
+
+# 触发条件：
+#   1) 推送 tag（形如 v1.0.0 / v1.2.3）→ 自动用 tag 名当版本号
+#   2) 手动在 Actions 页面点 Run workflow → 填版本号
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'ipk 版本号，例如 1.0.0'
+        required: true
+        default: '1.0.0'
+
+# 允许工作流向仓库写 Release
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout 代码
+        uses: actions/checkout@v4
+
+      - name: 安装 Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.21'
+
+      # 交叉编译两个架构的二进制（纯静态，CGO 关闭）
+      # 一个 ipk 同时打包 amd64 + arm64，运行时靠 uname -m 自检测，
+      # 所以本工作流只出「一个 all 架构 ipk」即可适配绝大多数 x86_64 / aarch64 软路由。
+      - name: 编译二进制 (amd64 + arm64)
+        run: |
+          set -e
+          CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -ldflags="-s -w" -o dist/model-gatewayd-amd64 .
+          CGO_ENABLED=0 GOOS=linux GOARCH=arm64 go build -ldflags="-s -w" -o dist/model-gatewayd-arm64 .
+          cp dist/model-gatewayd-amd64 ipk-build/ipk-build-root/usr/bin/model-gatewayd
+          cp dist/model-gatewayd-arm64 ipk-build/ipk-build-root/usr/bin/model-gatewayd-arm64
+          chmod 755 ipk-build/ipk-build-root/usr/bin/model-gatewayd ipk-build/ipk-build-root/usr/bin/model-gatewayd-arm64
+
+      # 确定版本号：手动触发用填写的值；打 tag 触发用 tag 名（去掉开头的 v）
+      - name: 确定版本号
+        id: ver
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            echo "version=${{ github.event.inputs.version }}" >> "$GITHUB_OUTPUT"
+          else
+            echo "version=${GITHUB_REF_NAME#v}" >> "$GITHUB_OUTPUT"
+          fi
+
+      # 用环境变量把版本号注入打包脚本（mkipk.py 里 IPK_VERSION 优先）
+      - name: 打包 ipk
+        env:
+          IPK_VERSION: ${{ steps.ver.outputs.version }}
+        run: python3 ipk-build/mkipk.py
+
+      # 自动创建 Release 并上传 ipk（标签触发时按 tag 名建 Release）
+      - name: 发布到 GitHub Releases
+        uses: softprops/action-gh-release@v2
+        with:
+          files: ipk-build/luci-app-model-gateway_*.ipk
+          generate_release_notes: true
