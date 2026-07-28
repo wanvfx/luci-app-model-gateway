@@ -2,10 +2,8 @@ package engine
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"net/http"
-	"strings"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -73,10 +71,17 @@ type Poller struct {
 	scorer   *Scorer
 	history  *storage.History
 	circuits *CircuitPool
+	resolve  func(string) string // 模型别名解析（Python: MODEL_ALIASES.get(model, model)），nil 则原样
 
 	// 智能省电（limited）策略的内存态计数（重启归零，避免频繁写 flash）
 	pollCount     int    // 已执行的自动巡检次数
 	lastDailyPoll string // 上次执行每日复查的日期（YYYY-MM-DD）
+}
+
+// SetResolver 注入模型别名解析器（main.go 用 MetaStore.ResolveModel 注入）。
+// Python 原版 check_model 探测前先做 MODEL_ALIASES 解析，否则别名模型探测 404 误报失败。
+func (p *Poller) SetResolver(fn func(string) string) {
+	p.resolve = fn
 }
 
 // NewPoller 创建巡检器
@@ -109,11 +114,15 @@ func (p *Poller) Start(ctx context.Context, getProviders func() []*config.Provid
 		case <-ticker.C:
 			p.runOnce(getProviders(), getStrategy())
 		case <-kickCh:
-			// 配置变更唤醒：重置省电计数（重新进入密集巡检期，覆盖新增平台），
-			// 并立即执行一轮，让新平台的模型状态尽快出现在稳定性列表。
-			p.pollCount = 0
-			pollCountAtomic.Store(0)
-			p.runOnce(getProviders(), getStrategy())
+			// 配置变更唤醒：仅重置智能省电计数，使巡检器恢复"密集巡检"阶段，
+			// 新平台的模型会在下一个 ticker（≤ POLL_INTERVAL，默认 300s）被探测。
+			// 与原 Python 1.6.1 一致：保存配置从不额外触发即时探测，
+			// 避免上游被重复轰击、探针频率过快（问题 4 修复）。
+			// 注意：不调用 runOnce，避免"每次保存都立即全量探测"的高频轰击。
+			if p.pollCount >= pollMaxCount {
+				p.pollCount = 0
+				pollCountAtomic.Store(0)
+			}
 		}
 	}
 }
@@ -134,8 +143,19 @@ func (p *Poller) runOnce(providers []*config.Provider, strategy string) {
 	// 每天中午 12 点后，若当天尚未做过复查，则强制复查一次（即使已达上限）
 	shouldDaily := today != p.lastDailyPoll && now.Hour() >= 12
 
-	if p.pollCount >= pollMaxCount && !shouldDaily {
-		pollStageAtomic.Store("idle")
+	if p.pollCount >= pollMaxCount {
+		// 已达密集巡检上限：进入休眠，不再累加「密集进度」计数（pollCount 保持 pollMaxCount）。
+		// 每日复查会在此时执行一次真实探测以刷新模型状态，但「不」计入 pollCount，
+		// 否则徽标「探针次数」会被每日静默复查无限累加（20→21→…→39），
+		// 与前端「智能巡检约 20 次后休眠」的描述矛盾（问题修复）。
+		if shouldDaily {
+			pollStageAtomic.Store("running")
+			p.poll(providers)
+			p.lastDailyPoll = today
+			pollStageAtomic.Store("idle")
+		} else {
+			pollStageAtomic.Store("idle")
+		}
 		return
 	}
 
@@ -143,9 +163,6 @@ func (p *Poller) runOnce(providers []*config.Provider, strategy string) {
 	p.poll(providers)
 	p.pollCount++
 	pollCountAtomic.Store(int64(p.pollCount))
-	if shouldDaily {
-		p.lastDailyPoll = today
-	}
 }
 
 // poll 执行一轮巡检：并发探测所有 provider 的所有模型（Semaphore(10)）
@@ -191,7 +208,7 @@ func (p *Poller) poll(providers []*config.Provider) {
 func (p *Poller) probeAndRecord(prov *config.Provider, model string) {
 	modelKey := prov.Name + "||" + model
 
-	ok, detail, latency := p.checkModel(prov, model)
+	ok, detail, latency, kind := p.checkModel(prov, model)
 
 	result := ProbeResult{
 		Model:   model,
@@ -201,11 +218,11 @@ func (p *Poller) probeAndRecord(prov *config.Provider, model string) {
 	}
 	p.scorer.Record(result)
 
-	// 记录熔断状态
+	// 记录熔断状态（按失败归因：仅超时/连接失败/5xx 跳闸，429/鉴权/配额不误杀）
 	if ok {
 		p.circuits.RecordSuccess(modelKey)
 	} else {
-		p.circuits.RecordFailure(modelKey)
+		p.circuits.RecordFailureWithType(modelKey, kind)
 	}
 
 	if err := p.history.Append(storage.PollRecord{
@@ -225,41 +242,15 @@ func (p *Poller) probeAndRecord(prov *config.Provider, model string) {
 	fmt.Printf("[poll] %s/%s -> %s (%dms) %s\n", prov.Name, model, status, latency.Milliseconds(), detail)
 }
 
-// checkModel 对单个模型调用 chat/completions 做健康探测
-func (p *Poller) checkModel(prov *config.Provider, model string) (ok bool, detail string, latency time.Duration) {
-	if prov.BaseURL == "" {
-		return false, "empty base_url", 0
+// checkModel 对单个模型做真实探测（与原 Python 1.6.1 check_model 一致）：
+// 先做别名解析，再 POST {BaseURL}/chat/completions（max_tokens=5、30s 超时）。
+// 逐模型独立结果、生成延迟真实可比；GET /models 仅用于 Key 校验，不再用于巡检
+//（端点级探活会导致每模型重复轰击 /models → 限流误报 + 所有模型共享一个结果）。
+// 第 4 个返回值为失败归因（成功时无意义），供熔断决定是否跳闸
+func (p *Poller) checkModel(prov *config.Provider, model string) (ok bool, detail string, latency time.Duration, kind FailKind) {
+	actual := model
+	if p.resolve != nil {
+		actual = p.resolve(model)
 	}
-
-	url := strings.TrimRight(prov.BaseURL, "/") + "/chat/completions"
-	payload := map[string]interface{}{
-		"model":      model,
-		"messages":   []map[string]string{{"role": "user", "content": "hi"}},
-		"max_tokens": 5,
-		"stream":     false,
-	}
-	body, _ := json.Marshal(payload)
-
-	req, err := http.NewRequestWithContext(context.Background(), http.MethodPost, url, strings.NewReader(string(body)))
-	if err != nil {
-		return false, fmt.Sprintf("build request: %v", err), 0
-	}
-	req.Header.Set("Authorization", "Bearer "+prov.APIKey)
-	req.Header.Set("Content-Type", "application/json")
-
-	start := time.Now()
-	resp, err := p.client.Do(req)
-	latency = time.Since(start)
-	if err != nil {
-		return false, fmt.Sprintf("connect: %v", err), latency
-	}
-	defer resp.Body.Close()
-
-	if resp.StatusCode == http.StatusOK || resp.StatusCode == http.StatusNoContent {
-		return true, fmt.Sprintf("HTTP %d", resp.StatusCode), latency
-	}
-	if resp.StatusCode == http.StatusUnauthorized || resp.StatusCode == http.StatusForbidden {
-		return false, fmt.Sprintf("auth failed (HTTP %d)", resp.StatusCode), latency
-	}
-	return false, fmt.Sprintf("HTTP %d", resp.StatusCode), latency
+	return ChatProbe(prov.BaseURL, prov.APIKey, actual, p.client)
 }

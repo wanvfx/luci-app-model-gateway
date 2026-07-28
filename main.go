@@ -94,6 +94,11 @@ func main() {
 	}
 	globalCfg = cfg
 
+	// 密钥保险库：UCI 中 api_key 以 enc: 前缀密文存储，启动时解密到内存
+	// （vault 主密钥落 MODEL_GATEWAY_DATA/vault.key，符合 iStoreOS 可写数据铁律）
+	vault := storage.NewVault(dataDir)
+	cfg.DecryptAPIKeys(vault.Decrypt)
+
 	// 自动生成 admin_key（首次启动、placeholder，或旧的无前缀格式时）
 	if cfg.AdminKey() == "" || cfg.AdminKey() == "AUTO_GENERATED_ON_FIRST_BOOT" || !strings.HasPrefix(cfg.AdminKey(), "sk-local-") {
 		newKey := generateAdminKey()
@@ -138,7 +143,7 @@ func main() {
 	// 两者均使用 atomic.Pointer 持有配置，彻底消除并发读写 data race 与两份配置偶发不同步（修复 #2）
 	var adminHandler *api.AdminHandler
 	reloadFn := func() (*config.Config, error) {
-		newCfg, err := doReloadConfig(*cfgPath)
+		newCfg, err := doReloadConfig(*cfgPath, vault.Decrypt)
 		if err != nil {
 			return nil, err
 		}
@@ -150,13 +155,34 @@ func main() {
 	}
 
 	adminHandler = api.NewAdminHandler(cfg, history, usage, dataDir, appDir, *cfgPath, reloadFn, srv.Meta(), &modelCacheAdapter{cache: srv.ModelDetailCache()})
+	// 注入缓存/预算运行时（三缺口端点：/api/cache、/api/budget-status）
+	adminHandler.SetGatewayRuntime(srv.ResponseCache(), srv.Budget())
+	// 注入密钥保险库（批量加密 api_key）
+	adminHandler.SetVault(vault)
 	srv.RegisterAdminRoutes(adminHandler)
+
+	// 虚拟密钥（子密钥）存储：落 MODEL_GATE_DATA/vkeys.json，供 /api/vkeys 与 Bearer 鉴权
+	vkeyStore := storage.NewVKeyStore(dataDir)
+	adminHandler.SetVKeyStore(vkeyStore)
+	srv.SetVKeyStore(vkeyStore)
+
+	// 模型价格自动同步器：落 MODEL_GATEWAY_DATA/models_catalog_sync.json 覆盖层，
+	// 供 /api/price-sync 手动触发（后台循环在 ctx 定义后启动）
+	priceSync := engine.NewPriceSync(appDir, dataDir, srv.Catalog(), pollHTTPClient())
+	adminHandler.SetPriceSync(priceSync)
+	// 成本/用量仪表盘：注入模型参考库（价格来源）
+	adminHandler.SetCatalog(srv.Catalog())
 
 	// 初始化巡检器
 	poller := engine.NewPoller(time.Duration(cfg.PollInterval())*time.Second, scorer, history, pollHTTPClient(), circuits)
+	// 注入别名解析：巡检逐模型探测时把别名解析为标准模型名（对齐 Python normalize_model）
+	poller.SetResolver(srv.Meta().ResolveModel)
 
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
+
+	// 后台价格自动同步：每 24h 检查（覆盖层超 7 天未更新才真拉取），首次延迟 5 分钟
+	go priceSync.AutoSyncLoop(ctx.Done())
 
 	go func() {
 		addr := cfg.BindAddr()
@@ -241,7 +267,10 @@ func (a *modelCacheAdapter) Get(modelID string) *api.ModelDetailItem {
 }
 
 // doReloadConfig 热重载配置（UCI 变更后调用）
-func doReloadConfig(cfgPath string) (*config.Config, error) {
+// dec 用于解密 api_key：UCI 中落盘的是 "enc:" 前缀密文，重载到内存时必须解密回明文，
+// 否则后台巡检 / 手动检测 / 代理转发都会带着密文密钥去请求上游 → 全部 401 → 模型全红。
+// 这是 r20260727d 之前“保存配置或一键配置后所有模型检测变红”的根因（修复）。
+func doReloadConfig(cfgPath string, dec func(string) string) (*config.Config, error) {
 	if env := os.Getenv("MODEL_GATEWAY_CONFIG"); env != "" {
 		cfgPath = env
 	}
@@ -249,6 +278,11 @@ func doReloadConfig(cfgPath string) (*config.Config, error) {
 	newCfg, err := config.Load(cfgPath)
 	if err != nil {
 		return nil, err
+	}
+
+	// 关键：重载后内存中的密钥必须是明文，与启动时一致
+	if dec != nil {
+		newCfg.DecryptAPIKeys(dec)
 	}
 
 	cfgMu.Lock()

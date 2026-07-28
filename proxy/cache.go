@@ -15,15 +15,46 @@ import (
 
 // ModelDetail 模型详情缓存条目
 type ModelDetail struct {
-	ID            string  `json:"id"`
-	Object        string  `json:"object"`
-	Created       int64   `json:"created"`
-	OwnedBy       string  `json:"owned_by"`
-	ContextLen    int     `json:"context_length"`
-	MaxPosEmb     int     `json:"max_position_embeddings"`
-	MaxModelLen   int     `json:"max_model_len"`
-	PromptPrice   float64 `json:"prompt_price"`
-	CompletePrice float64 `json:"completion_price"`
+	ID            string     `json:"id"`
+	Object        string     `json:"object"`
+	Created       int64      `json:"created"`
+	OwnedBy       string     `json:"owned_by"`
+	ContextLen    int        `json:"context_length"`
+	MaxPosEmb     int        `json:"max_position_embeddings"`
+	MaxModelLen   int        `json:"max_model_len"`
+	PromptPrice   float64    `json:"prompt_price"`
+	CompletePrice float64    `json:"completion_price"`
+	// 嵌套 pricing（OpenRouter 等上游返回 pricing.prompt / pricing.completion）。
+	// 非 nil 表示上游确实返回了 pricing 字段，可用于免费判定（区分“未提供”与“价格为 0”）。
+	Pricing *PriceInfo `json:"pricing"`
+}
+
+// PriceInfo 上游 /models 返回的嵌套价格信息（prompt/completion 为主，input/output 作别名兜底）
+type PriceInfo struct {
+	Prompt     float64 `json:"prompt"`
+	Completion float64 `json:"completion"`
+	Input      float64 `json:"input"`
+	Output     float64 `json:"output"`
+}
+
+// IsFree 判断是否为免费模型：对齐 Python 原版 is_free_model / is_free_by_name
+//   - 名称含 :free / -free / _free → 免费
+//   - 上游返回 pricing 且 prompt/completion/input/output 全为 0 → 免费
+//   - 上游返回 pricing 且任一分量非 0 → 收费
+//   - 上游未返回任何 pricing 信息 → 保守视为免费（不误删，对齐 Python 兜底返回全部对话模型）
+func (d *ModelDetail) IsFree() bool {
+	lower := strings.ToLower(d.ID)
+	if strings.Contains(lower, ":free") || strings.Contains(lower, "-free") || strings.Contains(lower, "_free") {
+		return true
+	}
+	if d.Pricing != nil {
+		return d.Pricing.Prompt == 0 && d.Pricing.Completion == 0 && d.Pricing.Input == 0 && d.Pricing.Output == 0
+	}
+	if d.PromptPrice != 0 || d.CompletePrice != 0 {
+		return false
+	}
+	// 无 pricing 信息，保守视为免费（避免把未标注价格的免费模型误删）
+	return true
 }
 
 // GetContextLen 实现接口供 ContextLengthWithFallback 使用
@@ -167,14 +198,11 @@ func (c *ModelCache) FetchAndCache(providers []*config.Provider, client *http.Cl
 			item := resp.Data[j]
 			item.Object = "model"
 
-			// free_only 过滤：如果 provider 设置了 free_only，只保留免费模型
+			// free_only 过滤：如果 provider 设置了 free_only，只保留免费模型。
+			// 免费判定：名称含 :free/-free/_free，或上游 pricing 全为 0（对齐 Python is_free_model）。
+			// 上游未返回 pricing 时保守保留（避免误删 NVIDIA 等无 -free 后缀的免费模型）。
 			if res.provider.FreeOnly {
-				// 检查模型名是否包含免费标记
-				lowerID := strings.ToLower(item.ID)
-				isFree := strings.Contains(lowerID, ":free") ||
-					strings.Contains(lowerID, "-free") ||
-					strings.Contains(lowerID, "_free")
-				if !isFree {
+				if !item.IsFree() {
 					continue
 				}
 			}

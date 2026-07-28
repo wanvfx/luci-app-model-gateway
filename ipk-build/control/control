@@ -1,5 +1,5 @@
 Package: luci-app-model-gateway
-Version: 1.0.0-test
+Version: 1.5.3-r20260728c
 Architecture: all
 Section: luci
 Priority: optional

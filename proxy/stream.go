@@ -17,22 +17,29 @@ import (
 
 // streamResult 流式转发结果（用于续写判断）
 type streamResult struct {
-	accumulated string // 累计收到的 content + reasoning_content
-	upstreamErr error
-	streamOK    bool // 流是否完整结束（收到 [DONE]）
-	totalTokens int  // 本次消耗的 token 总数（用于调用日志）
+	accumulated      string // 累计收到的 content + reasoning_content
+	upstreamErr      error
+	streamOK         bool // 流是否完整结束（收到 [DONE]）
+	totalTokens      int  // 本次消耗的 token 总数（用于调用日志）
+	promptTokens     int  // prompt token（Prometheus 指标用）
+	completionTokens int  // completion token（Prometheus 指标用）
 }
 
-// streamFromUpstream 从单个上游流式转发
-func (s *Server) streamFromUpstream(w http.ResponseWriter, r *http.Request, req *ChatRequest, body []byte, candidate *engine.Candidate, prelude string) streamResult {
+// streamFromUpstream 从单个上游流式转发。
+// headersSent 为跨候选共享状态（安全修复）：failover 到第二个候选时不再重复
+// WriteHeader / 重复发送 vision prelude，避免客户端收到重复内容与
+// "superfluous response.WriteHeader" 告警（流式响应乱码问题）。
+func (s *Server) streamFromUpstream(w http.ResponseWriter, r *http.Request, req *ChatRequest, body []byte, candidate *engine.Candidate, prelude string, headersSent *bool) streamResult {
 	provider := candidate.Provider
 	if provider == nil {
 		return streamResult{upstreamErr: fmt.Errorf("no provider for model %s", candidate.Model)}
 	}
 
-	// 替换模型名（使用别名解析）
+	// 替换模型名（使用别名解析）。
+	// 安全修复：只替换 JSON 的 "model" 字段，不再对整个 body 做子串替换，
+	// 避免用户 prompt 内容恰好包含模型名时被误改（污染对话内容）。
 	resolvedModel := s.meta.ResolveModel(candidate.Model)
-	reqBody := strings.Replace(string(body), req.Model, resolvedModel, 1)
+	reqBody := string(replaceModelInBody(body, req.Model, resolvedModel))
 
 	// 注入 stream_options: {"include_usage": true}（确保上游在流中返回 usage）
 	reqBody = injectStreamOptions(reqBody)
@@ -58,16 +65,22 @@ func (s *Server) streamFromUpstream(w http.ResponseWriter, r *http.Request, req 
 		return streamResult{upstreamErr: &UpstreamError{StatusCode: resp.StatusCode, Body: errBody}}
 	}
 
-	// 设置 SSE 头
-	w.Header().Set("Content-Type", "text/event-stream")
-	w.Header().Set("Cache-Control", "no-cache")
-	w.Header().Set("Connection", "keep-alive")
-	w.WriteHeader(http.StatusOK)
+	// 设置 SSE 头（仅首个成功拿到 200 的候选写一次；failover 续写时跳过）
+	firstWriter := headersSent == nil || !*headersSent
+	if firstWriter {
+		w.Header().Set("Content-Type", "text/event-stream")
+		w.Header().Set("Cache-Control", "no-cache")
+		w.Header().Set("Connection", "keep-alive")
+		w.WriteHeader(http.StatusOK)
+		if headersSent != nil {
+			*headersSent = true
+		}
+	}
 
 	flusher, _ := w.(http.Flusher)
 
-	// 发送 vision prelude（如有）
-	if prelude != "" {
+	// 发送 vision prelude（如有；仅首个候选发送，failover 不重复）
+	if prelude != "" && firstWriter {
 		preludeObj := map[string]interface{}{
 			"choices": []map[string]interface{}{
 				{"delta": map[string]interface{}{"content": prelude}, "index": 0},
@@ -178,7 +191,10 @@ func (s *Server) streamFromUpstream(w http.ResponseWriter, r *http.Request, req 
 			ct = int(v)
 		}
 		s.recordStreamUsage(provider, candidate.Model, pt, ct)
+		s.recordStreamBudget(provider, candidate.Model, pt, ct)
 		result.totalTokens = pt + ct
+		result.promptTokens = pt
+		result.completionTokens = ct
 	}
 
 	if err := scanner.Err(); err != nil {
@@ -190,14 +206,23 @@ func (s *Server) streamFromUpstream(w http.ResponseWriter, r *http.Request, req 
 }
 
 // forwardStreamWithFailover 流式转发（带自动故障转移 + 续写）
-func (s *Server) forwardStreamWithFailover(w http.ResponseWriter, r *http.Request, req *ChatRequest, body []byte, candidates []*engine.Candidate, prelude string) {
+func (s *Server) forwardStreamWithFailover(w http.ResponseWriter, r *http.Request, req *ChatRequest, body []byte, candidates []*engine.Candidate, prelude, cacheExactKey, cachePromptNorm string, vkey *storage.VKey) {
 	maxAttempts := 1
 
 	accumulated := ""
+	allBusy := true       // 只要有一个候选真正尝试过，就置 false
+	headersSent := false // SSE 头是否已写（跨候选共享，failover 时不重复写头/prelude）
 
 	for attempt := 0; attempt < maxAttempts; attempt++ {
 		for _, candidate := range candidates {
 			modelKey := candidate.Provider.Name + "||" + candidate.Model
+
+			// 并发护栏：单 provider 槽位（流式期间占用）
+			rel, pok := s.guard.TryAcquire(candidate.Provider.Name, 0, candidate.Provider.MaxConcurrency, 3*time.Second)
+			if !pok {
+				continue
+			}
+			allBusy = false
 
 			// 如果有续写内容，注入续写提示（与 Python 原版一致）
 			requestBody := body
@@ -205,23 +230,47 @@ func (s *Server) forwardStreamWithFailover(w http.ResponseWriter, r *http.Reques
 				requestBody = injectContinuation(body, accumulated)
 			}
 
-			result := s.streamFromUpstream(w, r, req, requestBody, candidate, prelude)
+			started := time.Now()
+			result := s.streamFromUpstream(w, r, req, requestBody, candidate, prelude, &headersSent)
+			rel() // 流已结束（成功或失败），释放 provider 槽位
 
 			if result.streamOK {
 				// 完整成功：记录熔断成功
 				s.circuits.RecordSuccess(modelKey)
+				// Prometheus 指标（流式成功；token 明细已在 streamFromUpstream 记账，
+				// 此处直方图只需耗时 + 计数，token 按 usage 拆分不可得时记 0）
+				s.metrics.ObserveRequest(candidate.Provider.Name, candidate.Model, "ok", time.Since(started), result.promptTokens, result.completionTokens)
+				// 虚拟密钥：记录当日用量（1 请求 + 本次 Token）
+				s.recordVKeyUsage(vkey, 1, result.totalTokens)
 				calllog.Append(calllog.Entry{
 					Provider: candidate.Provider.Name,
 					Model:    candidate.Model,
 					Status:   "ok",
 					Tokens:   result.totalTokens,
 				})
+				// 写入响应缓存（流式：完整累计内容 + 之前 failover 的累计）
+				fullContent := accumulated + result.accumulated
+				if cacheExactKey != "" && fullContent != "" {
+					s.cache.PutContent(req.Model, cacheExactKey, cachePromptNorm, fullContent, false)
+				}
+				// 钩子：请求成功
+				s.hookDispatcher().Fire(HookEventDone, req.Model, candidate.Provider.Name, true, result.totalTokens, "", "")
 				return
 			}
 
 			if result.upstreamErr != nil {
-				// 失败：记录熔断失败
-				s.circuits.RecordFailure(modelKey)
+				// 失败：按错误类型归因记录熔断（429/鉴权/配额/客户端取消不误杀）
+				kind := engine.ClassifyNetErr(result.upstreamErr)
+				status := 0
+				netErr := true
+				if ue, ok := result.upstreamErr.(*UpstreamError); ok {
+					kind = engine.ClassifyStatus(ue.StatusCode)
+					status = ue.StatusCode
+					netErr = false
+				}
+				s.circuits.RecordFailureWithType(modelKey, kind)
+				s.metrics.ObserveRequest(candidate.Provider.Name, candidate.Model, "fail", time.Since(started), 0, 0)
+				s.recordPenalty(candidate.Provider.Name, candidate.Model, status, netErr)
 				errMsg := result.upstreamErr.Error()
 				if ue, ok := result.upstreamErr.(*UpstreamError); ok {
 					errMsg = fmt.Sprintf("HTTP %d", ue.StatusCode)
@@ -241,6 +290,16 @@ func (s *Server) forwardStreamWithFailover(w http.ResponseWriter, r *http.Reques
 			}
 		}
 	}
+
+	// 并发全忙：所有候选 provider 槽位都拿不到，返回 429（尚未写 SSE 头，可安全返回）
+	if allBusy {
+		http.Error(w, "too many concurrent requests", http.StatusTooManyRequests)
+		s.hookDispatcher().Fire(HookEventFailed, req.Model, "", true, 0, "concurrency limit", "")
+		return
+	}
+
+	// 钩子：全部候选失败
+	s.hookDispatcher().Fire(HookEventFailed, req.Model, "", true, 0, "all candidates failed", "")
 
 	// 全部候选均失败：对齐 Python 原版（app.py:1922），先推「回复中断」提示 delta，
 	// 再发送 [DONE]，避免用户看到一段「看似完整、实际被截断」的回答且无任何报错。
@@ -296,6 +355,20 @@ func injectContinuation(body []byte, accumulated string) []byte {
 	parsed["messages"] = msgs
 	out, _ := json.Marshal(parsed)
 	return out
+}
+
+// recordStreamBudget 流式请求预算记账（成本护栏）
+func (s *Server) recordStreamBudget(provider *config.Provider, model string, promptTokens, completionTokens int) {
+	if s.budget == nil {
+		return
+	}
+	var priceIn, priceOut float64
+	if s.catalog != nil {
+		if e := s.catalog.Lookup(model); e != nil {
+			priceIn, priceOut = e.PriceIn, e.PriceOut
+		}
+	}
+	s.budget.AddCost(model, provider.Name, promptTokens, completionTokens, priceIn, priceOut)
 }
 
 // recordStreamUsage 记录流式请求的 usage

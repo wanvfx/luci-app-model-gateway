@@ -1,0 +1,42 @@
+{
+  "version": 1,
+  "models": {
+    "deepseek-v4-flash": { "tier": "mid", "capabilities": ["text", "reasoning"], "context_length": 1048576, "price_in": 0.14, "price_out": 0.28, "family": "deepseek" },
+    "deepseek-v4-pro": { "tier": "top", "capabilities": ["text", "reasoning"], "context_length": 1048576, "price_in": 0.55, "price_out": 2.19, "family": "deepseek" },
+    "glm-5.2": { "tier": "top", "capabilities": ["text", "reasoning"], "context_length": 1048576, "price_in": 0.6, "price_out": 2.2, "family": "glm" },
+    "glm-5.2-free": { "tier": "mid", "capabilities": ["text", "reasoning"], "context_length": 1048576, "price_in": 0, "price_out": 0, "family": "glm" },
+    "glm-5.1": { "tier": "mid", "capabilities": ["text"], "context_length": 131072, "price_in": 0.35, "price_out": 1.4, "family": "glm" },
+    "kimi-k2.6": { "tier": "top", "capabilities": ["text", "reasoning"], "context_length": 262144, "price_in": 0.6, "price_out": 2.5, "family": "kimi" },
+    "minimax-m3": { "tier": "top", "capabilities": ["text", "reasoning"], "context_length": 1048576, "price_in": 0.5, "price_out": 2.0, "family": "minimax" },
+    "minimax-m2.7": { "tier": "mid", "capabilities": ["text"], "context_length": 204800, "price_in": 0.3, "price_out": 1.2, "family": "minimax" },
+    "qwen3.5-122b-a10b": { "tier": "mid", "capabilities": ["text", "reasoning"], "context_length": 262144, "price_in": 0.2, "price_out": 0.8, "family": "qwen" },
+    "qwen3.5-397b-a17b": { "tier": "top", "capabilities": ["text", "reasoning"], "context_length": 262144, "price_in": 0.6, "price_out": 2.4, "family": "qwen" },
+    "gemini-3.5-flash": { "tier": "mid", "capabilities": ["text", "vision", "reasoning"], "context_length": 1048576, "price_in": 0.3, "price_out": 1.2, "family": "gemini" },
+    "gpt-oss-120b": { "tier": "mid", "capabilities": ["text", "reasoning"], "context_length": 131072, "price_in": 0.1, "price_out": 0.5, "family": "gpt-oss" },
+    "mistral-small-4-119b-2603": { "tier": "mid", "capabilities": ["text", "vision"], "context_length": 262144, "price_in": 0.1, "price_out": 0.3, "family": "mistral" },
+    "mistral-large-3-675b-instruct-2512": { "tier": "top", "capabilities": ["text", "vision", "reasoning"], "context_length": 262144, "price_in": 2.0, "price_out": 6.0, "family": "mistral" },
+    "mistral-medium-3.5-128b": { "tier": "mid", "capabilities": ["text"], "context_length": 262144, "price_in": 0.4, "price_out": 2.0, "family": "mistral" },
+    "nemotron-3-super-120b-a12b": { "tier": "mid", "capabilities": ["text", "reasoning"], "context_length": 262144, "price_in": 0, "price_out": 0, "family": "nemotron" },
+    "nemotron-3-ultra-550b-a55b": { "tier": "top", "capabilities": ["text", "reasoning"], "context_length": 262144, "price_in": 0, "price_out": 0, "family": "nemotron" },
+    "nemotron-nano-12b-v2-vl": { "tier": "lite", "capabilities": ["text", "vision"], "context_length": 131072, "price_in": 0, "price_out": 0, "family": "nemotron" },
+    "llama-3.1-nemotron-nano-vl-8b-v1": { "tier": "lite", "capabilities": ["text", "vision"], "context_length": 131072, "price_in": 0, "price_out": 0, "family": "nemotron" },
+    "llama-3.2-11b-vision-instruct": { "tier": "lite", "capabilities": ["text", "vision"], "context_length": 131072, "price_in": 0, "price_out": 0, "family": "llama" },
+    "sensenova-6.7-flash-lite": { "tier": "lite", "capabilities": ["text", "vision"], "context_length": 131072, "price_in": 0, "price_out": 0, "family": "sensenova" },
+    "sensenova-u1-fast": { "tier": "lite", "capabilities": ["text", "vision"], "context_length": 32768, "price_in": 0, "price_out": 0, "family": "sensenova" },
+    "internvl3_5-241b-a28b": { "tier": "mid", "capabilities": ["text", "vision"], "context_length": 32768, "price_in": 0, "price_out": 0, "family": "internvl" },
+    "qwen3-vl-8b-thinking": { "tier": "lite", "capabilities": ["text", "vision", "reasoning"], "context_length": 262144, "price_in": 0, "price_out": 0, "family": "qwen" },
+    "qwen3-vl-8b-instruct": { "tier": "lite", "capabilities": ["text", "vision"], "context_length": 262144, "price_in": 0, "price_out": 0, "family": "qwen" },
+    "ernie-4.5-vl-28b-a3b-pt": { "tier": "lite", "capabilities": ["text", "vision"], "context_length": 32768, "price_in": 0, "price_out": 0, "family": "ernie" }
+  },
+  "rules": [
+    { "contains": ["-vl", "vision", "-vl-", "internvl"], "tier": "", "capabilities": ["text", "vision"] },
+    { "contains": ["think", "reason", "-r1", "-r2"], "capabilities": ["text", "reasoning"] },
+    { "contains": ["embed", "bge-", "e5-"], "capabilities": ["embedding"], "tier": "lite" },
+    { "contains": ["tts", "asr", "whisper", "audio"], "capabilities": ["audio"], "tier": "lite" },
+    { "contains": ["image", "flux", "sdxl", "stable-diffusion", "dall-e", "seedream"], "capabilities": ["image"], "tier": "mid" },
+    { "contains": ["nano", "mini", "lite", "tiny", "-1b", "-2b", "-3b", "-4b", "-7b", "-8b", "-9b"], "tier": "lite" },
+    { "contains": ["flash", "small", "medium", "-12b", "-14b", "-24b", "-27b", "-32b", "-70b", "-72b"], "tier": "mid" },
+    { "contains": ["ultra", "large", "pro", "max", "-235b", "-405b", "-550b", "-675b"], "tier": "top" },
+    { "contains": [":free", "-free", "_free"], "price_in": 0, "price_out": 0 }
+  ]
+}

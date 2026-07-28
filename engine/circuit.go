@@ -9,6 +9,7 @@ import (
 type CircuitBreaker struct {
 	mu        sync.Mutex
 	failCount int
+	lastFail  time.Time // 最近一次失败时间（用于窗口衰减）
 	openUntil time.Time
 	threshold int
 	window    time.Duration
@@ -40,13 +41,20 @@ func (c *CircuitBreaker) Success() {
 	c.openUntil = time.Time{}
 }
 
-// Failure 记录失败
+// Failure 记录失败。
+// 窗口衰减修复：只有「window 时间内连续 threshold 次失败」才跳闸；
+// 距上次失败超过 window 则先清零计数，避免数天内零星失败累计误跳闸。
 func (c *CircuitBreaker) Failure() {
 	c.mu.Lock()
 	defer c.mu.Unlock()
+	now := time.Now()
+	if !c.lastFail.IsZero() && now.Sub(c.lastFail) > c.window {
+		c.failCount = 0
+	}
+	c.lastFail = now
 	c.failCount++
 	if c.failCount >= c.threshold {
-		c.openUntil = time.Now().Add(c.window)
+		c.openUntil = now.Add(c.window)
 	}
 }
 

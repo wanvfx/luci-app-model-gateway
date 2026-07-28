@@ -71,7 +71,7 @@ def parse_ar_header(header):
     }, None
 
 def main():
-    fname = r"C:\Users\Administrator\Downloads\model-gateway\luci-app-model-gateway\luci-app-model-gateway_1.0.0-r20260722_all.ipk"
+    fname = r"C:\Users\Administrator\Downloads\model-gateway\luci-app-model-gateway\ipk-build\luci-app-model-gateway_1.5.3-r20260727c_all.ipk"
     
     with open(fname, "rb") as f:
         magic = f.read(8)

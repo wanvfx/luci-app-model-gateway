@@ -354,10 +354,14 @@ m.on_after_commit = function(self)
     if selector == "" or selector == nil then selector = "default" end
     local custom = selected_custom or shell_uci_get("model-gateway.settings.custom_path")
 
-    -- 本次未提交任何路径选择（下拉/自定义均为空）：说明只改了其它字段（如 KEY/端口），
-    -- 保持现有 config_path 不变，既不迁移也不删除，避免误清外部存储配置。
-    if (selector == nil or selector == "") and (custom == nil or custom == "") then
-        sys.call("logger -t model-gateway 'on_after_commit: 未改动存储路径，保持现状'")
+    -- 获取当前实际生效的 config_path（commit 后的最新值）
+    local current_cp_val = get_config_path()
+    local new_path = resolve_path(selector, custom)
+
+    -- 路径未实际变化（包括：用户未改路径 / 选了 default 且已处于默认路径 / 自定义路径与当前相同）：
+    -- 保持现有 config_path 不变，不显示“切换回默认路径”等误导提示。
+    if new_path == current_cp_val then
+        sys.call("logger -t model-gateway 'on_after_commit: 存储路径未变动，保持现状'")
         self.message = "配置已保存（存储路径未变动）"
         apply_service()
         return
@@ -379,7 +383,6 @@ m.on_after_commit = function(self)
         return
     end
 
-    local new_path = resolve_path(selector, custom)
     local ok, msg = true, ""
     local migrated = false
 

@@ -12,7 +12,7 @@ description:
     聚合成统一接口，支持自动故障转移与基于质量/延迟的加权路由。
 category: 工具
 subcategory: AI
-icon: ""
+icon: "/usr/share/model-gateway/htdocs/logo.png"
 arch:
   - amd64
   - arm64

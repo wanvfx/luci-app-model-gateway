@@ -45,9 +45,38 @@ func (c *modelsCache) Invalidate() {
 	c.expires = time.Time{}
 }
 
+// enrichWithCatalog 从模型参考库注入分类信息（档位/能力/价格/家族）。
+// 未命中参考库时走兜底（默认 mid 档 + text 能力，并按名族关键词补全 vision/reasoning），
+// 确保前端不再出现"未分类"。
+func (s *Server) enrichWithCatalog(entry map[string]interface{}, model string) {
+	if s.catalog == nil {
+		return
+	}
+	e := s.catalog.LookupOrDefault(model)
+	if e.Tier != "" {
+		entry["tier"] = e.Tier
+	}
+	if len(e.Capabilities) > 0 {
+		entry["capabilities"] = e.Capabilities
+	}
+	if e.PriceIn > 0 || e.PriceOut > 0 {
+		entry["price_in"] = e.PriceIn
+		entry["price_out"] = e.PriceOut
+	}
+	if e.Family != "" {
+		entry["family"] = e.Family
+	}
+	// 参考库有上下文长度而上游详情缺失时兜底
+	if e.ContextLength > 0 {
+		if v, ok := entry["context_length"]; !ok || v == nil || v == 0 {
+			entry["context_length"] = e.ContextLength
+		}
+	}
+}
+
 // handleModels 处理 GET /v1/models
 func (s *Server) handleModels(w http.ResponseWriter, r *http.Request) {
-	if !s.authenticateClient(r) {
+	if !s.authClient(r).authed {
 		http.Error(w, "Unauthorized", http.StatusUnauthorized)
 		return
 	}
@@ -74,13 +103,33 @@ func (s *Server) handleModels(w http.ResponseWriter, r *http.Request) {
 
 	var data []map[string]interface{}
 
-	// 自定义路由组作为可输出的模型
+	// 自定义路由组作为可输出的模型（附带策略，前端展示用）
+	hasAuto := false
 	for _, rtr := range s.cfg.Load().Routers {
+		strategy := rtr.Strategy
+		if strategy == "" {
+			strategy = "quality"
+		}
+		if rtr.Name == "auto" {
+			hasAuto = true
+		}
 		data = append(data, map[string]interface{}{
 			"id":        rtr.Name,
 			"object":    "model",
 			"owned_by":  "Router",
 			"available": true,
+			"strategy":  strategy,
+		})
+	}
+	// auto 虚拟路由组（内存态，聚合所有启用模型；用户自建同名组时不重复）
+	if !hasAuto && s.router.Load().IsRouter("auto") {
+		data = append(data, map[string]interface{}{
+			"id":        "auto",
+			"object":    "model",
+			"owned_by":  "Router",
+			"available": true,
+			"strategy":  "quality",
+			"virtual":   true,
 		})
 	}
 
@@ -117,6 +166,7 @@ func (s *Server) handleModels(w http.ResponseWriter, r *http.Request) {
 			if detail != nil {
 				entry := map[string]interface{}{
 					"id":                      fullID,
+					"model":                   m, // 原始模型名（含 provider/ 前缀），供面板按 d.model 直接索引参考库
 					"object":                  detail.Object,
 					"created":                 detail.Created,
 					"owned_by":                detail.OwnedBy,
@@ -130,11 +180,13 @@ func (s *Server) handleModels(w http.ResponseWriter, r *http.Request) {
 				if desc != "" {
 					entry["desc"] = desc
 				}
+				s.enrichWithCatalog(entry, m)
 				data = append(data, entry)
 			} else {
 				ctxLen := s.meta.ContextLength(m)
 				entry := map[string]interface{}{
 					"id":                      fullID,
+					"model":                   m, // 原始模型名（含 provider/ 前缀），供面板按 d.model 直接索引参考库
 					"object":                  "model",
 					"owned_by":                p.Name,
 					"available":               available,
@@ -147,6 +199,7 @@ func (s *Server) handleModels(w http.ResponseWriter, r *http.Request) {
 				if desc != "" {
 					entry["desc"] = desc
 				}
+				s.enrichWithCatalog(entry, m)
 				data = append(data, entry)
 			}
 		}

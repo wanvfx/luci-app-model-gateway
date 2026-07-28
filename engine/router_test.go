@@ -28,7 +28,7 @@ func TestPickCandidatesPrefixedModel(t *testing.T) {
 	}
 
 	for _, c := range cases {
-		cands := r.PickCandidates(c.req, providers, nil)
+		cands := r.PickCandidates(c.req, providers, nil, PickOptions{})
 		if len(cands) != 1 {
 			t.Fatalf("req=%q 期望 1 个候选，实际 %d", c.req, len(cands))
 		}
@@ -41,7 +41,7 @@ func TestPickCandidatesPrefixedModel(t *testing.T) {
 	}
 
 	// 未知模型必须返回空（不再 fallback 到错误 provider 转发错名）
-	bad := r.PickCandidates("NotExist-model", providers, nil)
+	bad := r.PickCandidates("NotExist-model", providers, nil, PickOptions{})
 	if len(bad) != 0 {
 		t.Errorf("未知模型应返回 0 候选，实际 %d", len(bad))
 	}
@@ -62,7 +62,7 @@ func TestPickCandidatesDisabledFilter(t *testing.T) {
 
 	// 前缀名与真实名都应被过滤
 	for _, req := range []string{"MyPlatform-gpt-4o", "gpt-4o"} {
-		cands := r.PickCandidates(req, providers, disabled)
+		cands := r.PickCandidates(req, providers, disabled, PickOptions{})
 		for _, c := range cands {
 			if c.Model == "gpt-4o" {
 				t.Errorf("req=%q 不应返回被禁用的模型 gpt-4o", req)
@@ -71,7 +71,7 @@ func TestPickCandidatesDisabledFilter(t *testing.T) {
 	}
 
 	// 未被禁用的模型仍可正常选中
-	ok := r.PickCandidates("claude-3", providers, disabled)
+	ok := r.PickCandidates("claude-3", providers, disabled, PickOptions{})
 	if len(ok) != 1 || ok[0].Model != "claude-3" {
 		t.Errorf("未被禁用的 claude-3 应可正常选中，实际 %+v", ok)
 	}

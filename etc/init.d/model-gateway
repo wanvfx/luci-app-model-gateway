@@ -62,6 +62,16 @@ start_service() {
     procd_close_instance
 }
 
-stop() {
-    stop_service
+status() {
+    if pidof model-gatewayd model-gatewayd-arm64 >/dev/null 2>&1; then
+        echo "running"
+        return 0
+    fi
+    echo "stopped"
+    return 3
 }
+
+# 注意：不要自定义 stop() 覆盖 rc.common 默认实现。
+# 此前 stop() { stop_service } 跳过了 procd 的 kill 流程，
+# 导致 /etc/init.d/model-gateway stop 杀不掉进程（服务停不下来）。
+# USE_PROCD=1 时 rc.common 默认 stop 会正确终止 procd 实例。

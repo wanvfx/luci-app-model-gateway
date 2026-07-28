@@ -10,7 +10,7 @@
   },
   "category": "工具",
   "subcategory": "AI",
-  "icon": "",
+  "icon": "/usr/share/model-gateway/htdocs/logo.png",
   "arch": ["amd64", "arm64"],
   "port": 12211,
   "type": "native",

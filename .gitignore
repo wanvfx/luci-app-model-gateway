@@ -46,7 +46,8 @@ test_req.json
 小红书5图生成器.html
 小红书专属封面.html
 
-# ��������ƣ��� CI / go build ���ɣ����ύ��
+# 开源快照额外排除（打包产物/内部二进制/AI 工作记录）
+.workbuddy/
+*.ipk
 ipk-build/ipk-build-root/usr/bin/model-gatewayd
 ipk-build/ipk-build-root/usr/bin/model-gatewayd-arm64
-*.ipk

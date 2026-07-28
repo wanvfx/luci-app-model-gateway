@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <meta name="color-scheme" content="light dark">
 <title>模型仪表盘</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🔀</text></svg>">
 <style>
 * { -webkit-user-select: text; user-select: text; }
 :root {
@@ -400,6 +401,41 @@ tbody tr:last-child td { border-bottom: none; }
   color: rgba(255,255,255,0.9); background: rgba(255,255,255,0.15); border: 0.5px solid rgba(255,255,255,0.1);
 }
 
+/* 模型分类徽标（档位 / 能力） */
+.model-tier-badge, .model-cap-badge {
+  font-size: 10px; font-weight: 600; line-height: 1;
+  padding: 2px 6px; border-radius: 4px; margin-left: 5px; white-space: nowrap;
+}
+.model-tier-badge { color: #fff; background: #8e8e93; }
+.model-tier-badge.lite { background: #34c759; }
+.model-tier-badge.mid  { background: #007aff; }
+.model-tier-badge.top  { background: #ff9500; }
+.model-cap-badge { color: var(--text-secondary); background: rgba(0,0,0,0.06); }
+[data-theme="dark"] .model-cap-badge { color: rgba(255,255,255,0.75); background: rgba(255,255,255,0.1); }
+.model-price { font-variant-numeric: tabular-nums; font-size: 12px; color: var(--text-secondary); white-space: nowrap; }
+.model-price b { color: var(--text-primary); font-weight: 600; }
+
+/* 路由组：策略下拉 + 拖拽排序 */
+.router-group { border:1px solid var(--mac-border); border-radius:8px; padding:12px; background:rgba(255,255,255,0.4); margin-bottom:12px; }
+.router-group.collapsed .rg-members,
+.router-group.collapsed .rg-add,
+.router-group.collapsed .rg-hint { display:none; }
+.router-group.collapsed .rg-title { cursor:pointer; }
+[data-theme="dark"] .router-group { background: rgba(40,40,40,0.3); }
+.rg-head { display:flex; justify-content:space-between; align-items:center; gap:8px; margin-bottom:8px; flex-wrap: wrap; }
+.rg-title { font-weight:600; font-size:14px; }
+.rg-members { display:flex; flex-direction:column; gap:4px; max-height:240px; overflow-y:auto; margin:4px 0; }
+.rg-member { display:flex; align-items:center; gap:8px; padding:6px 10px; border:1px solid var(--mac-border); border-radius:6px; background: var(--mac-window-bg); cursor: grab; }
+.rg-member.dragging { opacity:0.4; }
+.rg-member .rg-handle { cursor: grab; color: var(--text-secondary); font-size:14px; user-select:none; }
+.rg-member .rg-name { flex:1; font-size:13px; font-family: ui-monospace, monospace; word-break: break-all; }
+.rg-member .rg-stats { font-size:11px; color: var(--text-secondary); }
+.rg-member .rg-rm { cursor:pointer; color: var(--danger); border:none; background:none; font-size:15px; padding:0 4px; }
+.rg-add { display:flex; gap:6px; margin-top:6px; }
+.rg-add select { flex:1; }
+.rg-hint { font-size:11px; color: var(--text-secondary); margin-top:6px; }
+.rg-empty { font-size:12px; color: var(--text-secondary); padding:6px 0; }
+
 .avail-wrap { display: flex; align-items: center; gap: 10px; }
 .avail-bar {
   flex: 1; max-width: 80px; height: 5px; border-radius: 3px;
@@ -616,6 +652,19 @@ input:checked + .slider:before { transform: translateX(14px); }
 .update-actions { display:flex; gap:8px; margin-top:16px; justify-content:flex-end; }
 .update-actions .btn-primary { padding:8px 20px; }
 
+/* 成本统计汇总卡 */
+.stat-card { padding:14px 16px; border-radius:10px; border:1px solid var(--mac-border); background:var(--mac-window-bg); }
+.stat-card .sc-val { font-size:20px; font-weight:700; color:var(--text-primary); line-height:1.2; }
+.stat-card .sc-label { font-size:12px; color:var(--text-secondary); margin-top:4px; }
+
+/* 模型启用/停用按钮（稳定性页） */
+.model-toggle-btn { border:none; border-radius:6px; padding:4px 10px; font-size:12px; cursor:pointer; font-weight:600; line-height:1.4; transition:all .15s; white-space:nowrap; }
+.model-toggle-btn.enabled { background:var(--success); color:#fff; }
+.model-toggle-btn.disabled { background:var(--text-secondary); color:#fff; opacity:.55; }
+.model-toggle-btn:disabled { opacity:.4; cursor:not-allowed; }
+.model-disabled-row { opacity:.45; }
+.model-disabled-row:hover { opacity:.6; }
+
 </style>
 </head>
 <body>
@@ -645,10 +694,10 @@ input:checked + .slider:before { transform: translateX(14px); }
   <div class="mac-content">
     <div class="header-actions">
       <div style="display: flex; align-items: center; gap: 24px;">
-        <h1 style="margin: 0;">AI 模型网关面板 <span style="font-size: 12px; font-weight: 500; color: var(--text-secondary); background: var(--mac-border); padding: 2px 8px; border-radius: 6px; vertical-align: middle; margin-left: 4px;">v1.0.0-r20260726z</span></h1>
+        <h1 style="margin: 0;">AI 模型网关面板 <span style="font-size: 12px; font-weight: 500; color: var(--text-secondary); background: var(--mac-border); padding: 2px 8px; border-radius: 6px; vertical-align: middle; margin-left: 4px;">v1.5.3</span></h1>
         <div class="main-tabs" style="display: flex; gap: 6px; background: rgba(0,0,0,0.04); padding: 4px; border-radius: 8px; border: 1px solid rgba(0,0,0,0.05);">
           <button id="tab-monitor" class="btn" onclick="switchMainTab('monitor')" style="border: none; font-weight: 600; box-shadow: 0 1px 3px rgba(0,0,0,0.1); background: var(--mac-window-bg); color: var(--text-primary);">实时监控</button>
-          <button id="tab-usage" class="btn" onclick="switchMainTab('usage')" style="border: none; font-weight: 500; box-shadow: none; background: transparent; color: var(--text-secondary);">消耗统计</button>
+          <button id="tab-stats" class="btn" onclick="switchMainTab('stats')" style="border: none; font-weight: 500; box-shadow: none; background: transparent; color: var(--text-secondary);">📊 统计</button>
         </div>
         <div style="display: flex; align-items: center; gap: 6px; position: relative;">
           <span style="font-size: 12px; color: var(--text-secondary); font-weight: 500;">巡检策略</span>
@@ -677,6 +726,7 @@ input:checked + .slider:before { transform: translateX(14px); }
       </div>
       <div style="display: flex; gap: 12px;">
         <button class="btn" onclick="openRouterManager()">🔀 路由配置</button>
+        <button class="btn" onclick="openGatewaySettings()">⚙️ 网关设置</button>
         <button class="btn" onclick="openFeishuModal()" style="color: var(--danger)">📢 系统公告</button>
         <button class="btn" onclick="checkUpdate(false)">🔄 检查更新</button>
         <button class="btn btn-icon" onclick="toggleTheme()" id="themeBtn" title="切换深色/浅色模式">
@@ -698,10 +748,14 @@ input:checked + .slider:before { transform: translateX(14px); }
       <div id="pollStatus">状态加载中...</div>
     </div>
 
+    <!-- 预算/余额预警 banner（超过预警阈值或超限时显示） -->
+    <div id="budgetBanner" style="display:none; margin-bottom:16px; padding:10px 14px; border-radius:10px; font-size:13px; line-height:1.6; align-items:center; gap:8px;"></div>
+
     <div class="provider-card" style="margin-bottom: 24px; border-color: var(--accent-primary); box-shadow: 0 0 10px rgba(0,122,255,0.1);">
       <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
         <div class="p-name" style="color: var(--accent-primary); margin-bottom: 0;">🚀 本地接口信息 (Local Gateway)</div>
         <div style="display:flex; gap:8px;">
+          <button class="btn" onclick="openVKeyModal()" style="font-size: 12px; padding: 4px 10px;">🔑 虚拟密钥</button>
           <button class="btn" onclick="openOutputModelsModal()" style="font-size: 12px; padding: 4px 10px;">📦 管理输出模型</button>
           <button class="btn" onclick="openVisionConfig()" style="font-size: 12px; padding: 4px 10px;">🖼️ 识图配置</button>
         </div>
@@ -748,6 +802,22 @@ input:checked + .slider:before { transform: translateX(14px); }
       <select id="providerFilter" onchange="renderStability()">
         <option value="all">全部提供商</option>
       </select>
+      <select id="tierFilter" onchange="renderStability()" title="按模型档位筛选">
+        <option value="all">全部档位</option>
+        <option value="lite">轻量 (lite)</option>
+        <option value="mid">均衡 (mid)</option>
+        <option value="top">旗舰 (top)</option>
+        <option value="none">未分类</option>
+      </select>
+      <select id="capFilter" onchange="renderStability()" title="按模型能力筛选">
+        <option value="all">全部能力</option>
+        <option value="text">文本 (text)</option>
+        <option value="vision">视觉 (vision)</option>
+        <option value="reasoning">推理 (reasoning)</option>
+        <option value="image">图像 (image)</option>
+        <option value="audio">音频 (audio)</option>
+        <option value="embedding">嵌入 (embedding)</option>
+      </select>
       <input type="text" id="stableSearch" placeholder="搜索模型标识..." oninput="renderStability()">
       <label class="hf-toggle" title="打开后，隐藏最近一次巡检失败（红点）的模型，只看当前可用的模型">
         <input type="checkbox" id="hideFailedToggle" checked onchange="onHideFailedChange()">
@@ -761,12 +831,15 @@ input:checked + .slider:before { transform: translateX(14px); }
         <thead>
           <tr>
             <th>模型名称</th>
+            <th>分类 / 能力</th>
             <th width="200">SLA 可用率</th>
             <th>上下文窗口</th>
+            <th>价格 / 百万 tokens</th>
             <th>探针次数</th>
             <th>成功 / 失败</th>
             <th>平均延迟</th>
             <th>极速 / 最慢</th>
+            <th>操作</th>
           </tr>
         </thead>
         <tbody id="stableBody"></tbody>
@@ -774,13 +847,14 @@ input:checked + .slider:before { transform: translateX(14px); }
     </div>
     </div> <!-- end monitor-view -->
 
-    <div id="usage-view" style="display: none;">
+    <div id="stats-view" style="display: none;">
+    <div id="usage-view">
     <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px; margin-top: 8px;">
       <h2 style="font-size: 16px; font-weight: 600;">消耗统计</h2>
       <div style="display: flex; gap: 8px;">
-        <button class="btn btn-primary usage-tab" data-days="1" onclick="switchUsageTab(1)">近24小时</button>
-        <button class="btn usage-tab" data-days="7" onclick="switchUsageTab(7)">近 7 天</button>
-        <button class="btn usage-tab" data-days="30" onclick="switchUsageTab(30)">近 30 天</button>
+        <button class="btn btn-primary stats-tab" data-days="1" onclick="switchStatsTab(1)">近24小时</button>
+        <button class="btn stats-tab" data-days="7" onclick="switchStatsTab(7)">近 7 天</button>
+        <button class="btn stats-tab" data-days="30" onclick="switchStatsTab(30)">近 30 天</button>
       </div>
     </div>
     <div id="usageOverview" style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-bottom: 16px;"></div>
@@ -801,6 +875,72 @@ input:checked + .slider:before { transform: translateX(14px); }
       </table>
     </div>
 
+    </div> <!-- end usage-view -->
+
+    <div id="cost-view">
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px; margin-top: 8px;">
+        <h2 style="font-size: 16px; font-weight: 600;">成本与用量统计</h2>
+      </div>
+      <!-- 预算概览卡 -->
+      <div id="costBudgetCard" style="margin-bottom:16px; padding:14px 16px; border-radius:10px; border:1px solid var(--mac-border); background: var(--mac-window-bg); font-size:13px; line-height:1.6; display:flex; justify-content:space-between; align-items:center; gap:12px;">
+        <div id="costBudgetText">加载中…</div>
+      </div>
+
+      <!-- 汇总卡 -->
+      <div id="costOverview" style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-bottom: 16px;"></div>
+
+      <!-- 按渠道 -->
+      <h2 style="font-size:16px; font-weight:600; margin-bottom:10px;">📊 按渠道（Provider）</h2>
+      <div class="table-container">
+        <table>
+          <thead>
+            <tr>
+              <th>渠道</th>
+              <th width="100">请求数</th>
+              <th width="140">输入 Token</th>
+              <th width="140">输出 Token</th>
+              <th width="140">成本(USD)</th>
+            </tr>
+          </thead>
+          <tbody id="costByProvider"><tr><td colspan="5" class="empty">加载中…</td></tr></tbody>
+        </table>
+      </div>
+
+      <!-- 按模型 -->
+      <h2 style="font-size:16px; font-weight:600; margin:20px 0 10px;">🤖 按模型</h2>
+      <div class="table-container">
+        <table>
+          <thead>
+            <tr>
+              <th>模型</th>
+              <th width="100">请求数</th>
+              <th width="140">输入 Token</th>
+              <th width="140">输出 Token</th>
+              <th width="140">成本(USD)</th>
+            </tr>
+          </thead>
+          <tbody id="costByModel"><tr><td colspan="5" class="empty">加载中…</td></tr></tbody>
+        </table>
+      </div>
+
+      <!-- 按日 -->
+      <h2 style="font-size:16px; font-weight:600; margin:20px 0 10px;">📅 按日趋势</h2>
+      <div class="table-container">
+        <table>
+          <thead>
+            <tr>
+              <th>日期</th>
+              <th width="100">请求数</th>
+              <th width="140">输入 Token</th>
+              <th width="140">输出 Token</th>
+              <th width="140">成本(USD)</th>
+            </tr>
+          </thead>
+          <tbody id="costByDay"><tr><td colspan="5" class="empty">加载中…</td></tr></tbody>
+        </table>
+      </div>
+    </div> <!-- end cost-view -->
+
     <!-- 调用日志（与 Python 原版 1.6.1 /api/call-log 对应） -->
     <h2 style="font-size:16px; font-weight:600; margin-top:24px; margin-bottom:12px;">📋 最近调用记录 <span style="font-size:12px;font-weight:400;color:var(--text-secondary);">（最多保留100条）</span></h2>
     <div class="table-container">
@@ -818,7 +958,9 @@ input:checked + .slider:before { transform: translateX(14px); }
         </tbody>
       </table>
     </div>
-    </div> <!-- end usage-view -->
+
+    </div> <!-- end stats-view -->
+
   </div>
 </div>
 
@@ -856,11 +998,143 @@ input:checked + .slider:before { transform: translateX(14px); }
       <div style="margin-top:16px; display:flex; justify-content:flex-end;">
         <button class="btn btn-primary" onclick="saveRouters()">保存所有路由</button>
       </div>
+
+      <!-- 别名映射：友好名 → 内部模型/路由组/auto -->
+      <div style="margin-top:20px; padding-top:16px; border-top:1px solid var(--mac-border);">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+          <div style="font-weight:600; font-size:14px;">🏷️ 别名映射</div>
+          <button class="btn" style="font-size:12px; padding:4px 10px;" onclick="addAliasRow()">+ 添加别名</button>
+        </div>
+        <div style="font-size:12px; color:var(--text-secondary); margin-bottom:10px;">给模型/路由组起个好记的名字（如 <code>fast</code> → <code>auto</code>）。客户端 <code>model</code> 填别名即可，网关内部透明重写，切换底层路由无需改客户端。</div>
+        
+        <!-- 别名预设 -->
+        <div style="display:flex; align-items:center; gap:10px; margin-bottom:10px; padding:8px 12px; border-radius:8px; border:1px dashed var(--mac-border);">
+          <button class="btn" style="font-size:12px; padding:4px 10px;" onclick="toggleAliasPreset()" id="aliasPresetFastBtn">⚡ 启用 fast → auto 预设</button>
+          <span style="font-size:11px; color:var(--text-secondary);">默认关闭，点击开启后自动追加到别名列表并保存</span>
+        </div>
+        
+        <div id="aliasListContainer" style="display:flex; flex-direction:column; gap:8px; max-height:200px; overflow-y:auto;"></div>
+        <div style="margin-top:12px; display:flex; justify-content:flex-end;">
+          <button class="btn btn-primary" onclick="saveAliases()">保存别名</button>
+        </div>
+      </div>
     </div>
   </div>
 </div>
 
 
+
+<!-- 网关设置弹窗：响应缓存 / 预算护栏 / 并发护栏 / REST 钩子 -->
+<div class="modal-overlay" id="gatewayModal" onclick="if(event.target===this) document.getElementById('gatewayModal').classList.remove('show')">
+  <div class="modal-content" style="max-width: 640px;">
+    <div class="modal-header">
+      <div class="modal-title">⚙️ 网关设置</div>
+      <div class="mac-btn close" onclick="document.getElementById('gatewayModal').classList.remove('show')" style="cursor: pointer;"></div>
+    </div>
+    <div class="modal-body" style="max-height:70vh; overflow-y:auto;">
+
+      <!-- 响应缓存 -->
+      <div style="margin-bottom:20px; padding:14px; border:1px solid var(--mac-border); border-radius:10px;">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
+          <div style="font-weight:600; font-size:14px;">🗂️ 响应缓存（语义级）</div>
+          <label class="hf-toggle"><input type="checkbox" id="gwCacheEnabled"><span class="hf-switch"></span><span>启用</span></label>
+        </div>
+        <div style="font-size:12px; color:var(--text-secondary); margin-bottom:10px;">相同或近似的重复提问直接用缓存秒回，不再消耗上游额度。近似匹配用 simhash 指纹（零依赖，软路由友好）。</div>
+        <div style="display:flex; gap:10px; flex-wrap:wrap; align-items:center; font-size:13px;">
+          <label>有效期(秒) <input type="number" id="gwCacheTTL" min="10" style="width:80px; padding:4px 8px; border:1px solid var(--mac-border); border-radius:6px; background:transparent; color:var(--text-primary);"></label>
+          <label>最大条数 <input type="number" id="gwCacheMax" min="10" style="width:80px; padding:4px 8px; border:1px solid var(--mac-border); border-radius:6px; background:transparent; color:var(--text-primary);"></label>
+          <label class="hf-toggle" title="开启后，措辞略有差异的同义问题也能命中缓存"><input type="checkbox" id="gwCacheSemantic"><span class="hf-switch"></span><span>近似匹配</span></label>
+        </div>
+        <div id="gwCacheStats" style="margin-top:10px; font-size:12px; color:var(--text-secondary);">统计加载中…</div>
+        <div style="margin-top:8px; display:flex; justify-content:flex-end;">
+          <button class="btn" style="font-size:12px; padding:4px 10px; color:var(--danger);" onclick="clearGatewayCache()">清空缓存</button>
+        </div>
+      </div>
+
+      <!-- 预算护栏 -->
+      <div style="margin-bottom:20px; padding:14px; border:1px solid var(--mac-border); border-radius:10px;">
+        <div style="font-weight:600; font-size:14px; margin-bottom:6px;">💰 预算护栏（每日成本）</div>
+        <div style="font-size:12px; color:var(--text-secondary); margin-bottom:10px;">按模型参考价累计当日成本（USD）。达到预警比例在面板顶部提醒；「超限拦截」模式下当日超限的请求直接返回 429。上限填 0 表示不限。</div>
+        <div style="display:flex; gap:10px; flex-wrap:wrap; align-items:center; font-size:13px;">
+          <label>每日上限($) <input type="number" id="gwBudgetLimit" min="0" step="0.01" style="width:90px; padding:4px 8px; border:1px solid var(--mac-border); border-radius:6px; background:transparent; color:var(--text-primary);"></label>
+          <label>动作
+            <select id="gwBudgetAction" style="padding:4px 8px; border:1px solid var(--mac-border); border-radius:6px; background:var(--mac-window-bg); color:var(--text-primary);">
+              <option value="warn">仅预警</option>
+              <option value="block">超限拦截</option>
+            </select>
+          </label>
+          <label>预警比例(%) <input type="number" id="gwBudgetWarnPct" min="1" max="100" style="width:70px; padding:4px 8px; border:1px solid var(--mac-border); border-radius:6px; background:transparent; color:var(--text-primary);"></label>
+        </div>
+        <div id="gwBudgetToday" style="margin-top:10px; font-size:12px; color:var(--text-secondary);"></div>
+      </div>
+
+      <!-- 并发护栏 -->
+      <div style="margin-bottom:20px; padding:14px; border:1px solid var(--mac-border); border-radius:10px;">
+        <div style="font-weight:600; font-size:14px; margin-bottom:6px;">🚦 并发护栏</div>
+        <div style="font-size:12px; color:var(--text-secondary); margin-bottom:10px;">限制同时处理的请求数，防止软路由内存被打满。0 表示不限。各提供商的单独并发上限在「编辑提供商」里设置（max_concurrency）。</div>
+        <label style="font-size:13px;">全局最大并发 <input type="number" id="gwMaxConcurrency" min="0" style="width:80px; padding:4px 8px; border:1px solid var(--mac-border); border-radius:6px; background:transparent; color:var(--text-primary);"></label>
+      </div>
+
+      <!-- 严格能力矩阵 -->
+      <div style="margin-bottom:20px; padding:14px; border:1px solid var(--mac-border); border-radius:10px;">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
+          <div style="font-weight:600; font-size:14px;">🛡️ 严格能力矩阵</div>
+          <label class="hf-toggle"><input type="checkbox" id="gwStrictCap"><span class="hf-switch"></span><span>启用</span></label>
+        </div>
+        <div style="font-size:12px; color:var(--text-secondary); line-height:1.6;">开启后，路由候选会<b>严格过滤掉不满足所需能力</b>的模型。例如请求带图片（视觉）时，不会把纯文本模型当候选，避免触发「该模型不支持图像」的 400 错误。关闭则沿用原版宽松匹配。</div>
+      </div>
+
+      <!-- REST 回调钩子 -->
+      <div style="margin-bottom:8px; padding:14px; border:1px solid var(--mac-border); border-radius:10px;">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
+          <div style="font-weight:600; font-size:14px;">🔔 事件钩子（Webhook）</div>
+          <button class="btn" style="font-size:12px; padding:4px 10px;" onclick="addHookRow()">+ 添加钩子</button>
+        </div>
+        <div style="font-size:12px; color:var(--text-secondary); margin-bottom:10px;">请求成功/失败时向你的 URL POST 一条 JSON（可接飞书/钉钉/n8n 等）。安全限制：https 任意地址；http 仅限本机 127.0.0.1。填写密钥后会附带 HMAC-SHA256 签名头 <code>X-Hook-Signature</code>。</div>
+        <div id="hookListContainer" style="display:flex; flex-direction:column; gap:8px;"></div>
+      </div>
+
+      <div style="margin-top:16px; display:flex; justify-content:flex-end; gap:8px;">
+        <button class="btn" onclick="document.getElementById('gatewayModal').classList.remove('show')">取消</button>
+        <button class="btn btn-primary" onclick="saveGatewaySettings()">保存全部设置</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- 虚拟密钥（子密钥）管理弹窗 -->
+<div class="modal-overlay" id="vkeyModal" onclick="if(event.target===this) document.getElementById('vkeyModal').classList.remove('show')">
+  <div class="modal-content" style="max-width: 680px;">
+    <div class="modal-header">
+      <div class="modal-title">🔑 虚拟密钥（子密钥）</div>
+      <div class="mac-btn close" onclick="document.getElementById('vkeyModal').classList.remove('show')" style="cursor: pointer;"></div>
+    </div>
+    <div class="modal-body" style="max-height:72vh; overflow-y:auto;">
+      <div style="font-size:12px; color:var(--text-secondary); margin-bottom:12px; line-height:1.6;">虚拟密钥是主管理密钥的子密钥：可下发给不同应用/用户，各自带<b>每日配额</b>（请求数 / Token）与<b>模型白名单</b>。超额或到期自动 429 拒绝。密钥明文仅在创建时显示一次，请妥善保存。</div>
+
+      <!-- 新建 -->
+      <div style="padding:14px; border:1px solid var(--mac-border); border-radius:10px; margin-bottom:16px;">
+        <div style="font-weight:600; font-size:14px; margin-bottom:10px;">➕ 新建虚拟密钥</div>
+        <div style="display:flex; gap:10px; flex-wrap:wrap; align-items:center; font-size:13px;">
+          <input type="text" id="vkName" placeholder="备注名（如 手机App）" style="flex:1; min-width:140px; padding:5px 8px; border:1px solid var(--mac-border); border-radius:6px; background:transparent; color:var(--text-primary);">
+          <label>每日请求上限 <input type="number" id="vkQuotaReq" min="0" placeholder="0=不限" style="width:90px; padding:4px 8px; border:1px solid var(--mac-border); border-radius:6px; background:transparent; color:var(--text-primary);"></label>
+          <label>每日Token上限 <input type="number" id="vkQuotaTok" min="0" placeholder="0=不限" style="width:90px; padding:4px 8px; border:1px solid var(--mac-border); border-radius:6px; background:transparent; color:var(--text-primary);"></label>
+        </div>
+        <div style="margin-top:10px; display:flex; gap:8px; align-items:center;">
+          <input type="text" id="vkAllowed" placeholder="模型白名单（逗号分隔，留空=全部）" style="flex:1; padding:5px 8px; border:1px solid var(--mac-border); border-radius:6px; background:transparent; color:var(--text-primary); font-size:12px;">
+          <button class="btn btn-primary" onclick="createVKey()">生成密钥</button>
+        </div>
+        <div id="vkCreateResult" style="display:none; margin-top:10px; padding:10px; border-radius:8px; background: var(--success-bg); border:1px solid rgba(40,205,65,0.3);"></div>
+      </div>
+
+      <!-- 列表 -->
+      <div style="font-weight:600; font-size:14px; margin-bottom:8px;">📋 现有虚拟密钥</div>
+      <div id="vkeyList" style="display:flex; flex-direction:column; gap:10px;">
+        <div class="empty">加载中…</div>
+      </div>
+    </div>
+  </div>
+</div>
 
 <!-- Feishu Modal -->
 <div class="modal-overlay" id="feishuModal" onclick="if(event.target===this) closeFeishuModal()">
@@ -906,7 +1180,7 @@ input:checked + .slider:before { transform: translateX(14px); }
     </div>
     <div class="modal-body" style="padding:20px 24px;">
       <div id="updateBody">
-        <div style="margin-bottom:8px;">当前版本：<b>v1.0.0-r20260726z</b> → 最新版本：<b id="updateLatestVer">-</b></div>
+        <div style="margin-bottom:8px;">当前版本：<b>v1.5.3</b> → 最新版本：<b id="updateLatestVer">-</b></div>
         <div id="updateNotes" class="update-notes" style="display:none;"></div>
         <div id="updateProgress" style="display:none;">
           <div class="update-progress-bar"><div class="update-progress-fill" id="updateProgressFill"></div></div>
@@ -1114,6 +1388,7 @@ function toggleTheme() {
 let data = [];
 let stabilityData = [];
 let modelDetails = {};
+let modelCatalog = {};   // id -> {tier, capabilities, price_in, price_out, family, virtual, strategy}（来自 /v1/models 参考库注入）
 
 function copyText(text, btn) {
   function showCopied() {
@@ -1151,7 +1426,7 @@ function copyText(text, btn) {
 
 let _detailsLoaded = false;
 let _detailsLoading = false;
-async function load() {
+async function load(force) {
   try {
     // 模型详情改为后台并行加载，不再阻塞"上游提供商"区域渲染。
     // 此前 await loadModelDetails() 串行等待，若后端 /api/model-details
@@ -1215,17 +1490,17 @@ async function load() {
       providerSelect.value = currentVal;
     }
 
-    loadStability();
+    loadStability(force);
     loadUsage();
   } catch (e) {
     if (e.message !== 'Unauthorized') console.error("Failed to load data:", e);
   }
 }
 
-async function loadStability() {
+async function loadStability(force) {
   const hours = document.getElementById('stabilityHours').value;
   try {
-    const r = await apiFetch(`/api/stability?hours=${hours}`);
+    const r = await apiFetch(`/api/stability?hours=${hours}${force ? '&refresh=1' : ''}`);
     stabilityData = await r.json();
     renderStability();
   } catch (e) {
@@ -1233,22 +1508,24 @@ async function loadStability() {
   }
 }
 
-let usageDays = 1;
+let statsDays = 1;
 async function loadUsage() {
   try {
-    const r = await apiFetch(`/api/usage?days=${usageDays}`);
+    const r = await apiFetch(`/api/usage?days=${statsDays}`);
     const data = await r.json();
     renderUsage(data);
   } catch (e) {
     if (e.message !== 'Unauthorized') console.error("Failed to load usage:", e);
   }
 }
-function switchUsageTab(days) {
-  usageDays = days;
-  document.querySelectorAll('.usage-tab').forEach(b => {
-    b.classList.toggle('btn-primary', Number(b.dataset.days) === days);
+function switchStatsTab(days) {
+  statsDays = days;
+  document.querySelectorAll('.stats-tab').forEach(b => {
+    const on = parseInt(b.dataset.days, 10) === days;
+    b.classList.toggle('btn-primary', on);
   });
   loadUsage();
+  loadCostDashboard();
 }
 
 async function loadCallLog() {
@@ -1346,6 +1623,8 @@ function renderStability() {
   const filter = document.getElementById('stableFilter').value;
   const search = document.getElementById('stableSearch').value.toLowerCase();
   const provider = document.getElementById('providerFilter').value;
+  const tierFilter = document.getElementById('tierFilter').value;
+  const capFilter = document.getElementById('capFilter').value;
   const hideFailedEl = document.getElementById('hideFailedToggle');
   const hideFailed = hideFailedEl ? hideFailedEl.checked : true;
 
@@ -1357,6 +1636,15 @@ function renderStability() {
     if (filter === 'high') return d.availability >= 90;
     if (filter === 'mid') return d.availability >= 50 && d.availability < 90;
     if (filter === 'low') return d.availability < 50;
+    // 档位 / 能力分类筛选（基于参考库注入的 tier / capabilities）
+    const ci = modelCatalog[d.model] || {};
+    const tier = ci.tier || 'none';
+    const caps = ci.capabilities || [];
+    if (tierFilter !== 'all' && tierFilter !== tier) return false;
+    if (capFilter !== 'all') {
+      const capsLower = (Array.isArray(caps) ? caps : []).map(c => String(c).toLowerCase());
+      if (!capsLower.includes(capFilter)) return false;
+    }
     return true;
   });
 
@@ -1365,13 +1653,16 @@ function renderStability() {
     const hint = hideFailed
       ? '该时间范围内暂无巡检记录。<br><span style="font-size:12px;color:var(--text-secondary)">（已开启「隐藏失败模型」，如需查看失败模型请关闭右侧开关；新添加的平台请稍候片刻，巡检完成后自动显示）</span>'
       : '该时间范围内暂无巡检记录。<br><span style="font-size:12px;color:var(--text-secondary)">（新添加的平台请稍候片刻，巡检完成后自动显示）</span>';
-    tbody.innerHTML = `<tr><td colspan="7" class="empty">${hint}</td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="10" class="empty">${hint}</td></tr>`;
     return;
   }
 
   tbody.innerHTML = filtered.map(d => {
-    const pct = typeof d.availability === 'number' ? d.availability.toFixed(1) : parseFloat(d.availability || 0).toFixed(1);
-    const barColor = pct >= 90 ? 'var(--success)' : pct >= 50 ? 'var(--warning)' : 'var(--danger)';
+    const isPending = d.last_status === 'pending';
+    const pctNum = typeof d.availability === 'number' ? d.availability : parseFloat(d.availability || 0);
+    const pct = isPending ? '—' : pctNum.toFixed(1);
+    const barColor = isPending ? 'var(--text-secondary)' : (pctNum >= 90 ? 'var(--success)' : pctNum >= 50 ? 'var(--warning)' : 'var(--danger)');
+    const barWidth = isPending ? '0%' : Math.min(100, pctNum) + '%';
     const avgL = d.avg_latency_ms !== null ? Math.round(d.avg_latency_ms) + ' ms' : '--';
     const minL = d.min_latency_ms !== null ? Math.round(d.min_latency_ms) + ' ms' : '--';
     const maxL = d.max_latency_ms !== null ? Math.round(d.max_latency_ms) + ' ms' : '--';
@@ -1380,16 +1671,36 @@ function renderStability() {
     const ctxLen = detail.context_length || detail.max_model_len || '--';
     const descHtml = detail.desc ? `<div class="model-desc">${detail.desc}</div>` : '';
 
+    // 参考库分类信息（tier / capabilities / 价格）
+    const ci = modelCatalog[d.model] || {};
+    const tier = ci.tier || '';
+    const tierLabel = { lite: '轻量', mid: '均衡', top: '旗舰' }[tier] || (tier ? tier : '未分类');
+    const tierBadge = `<span class="model-tier-badge ${tier || 'none'}">${tierLabel}</span>`;
+    const capLabelMap = { text: '文本', vision: '视觉', reasoning: '推理', image: '图像', audio: '音频', embedding: '嵌入' };
+    const caps = Array.isArray(ci.capabilities) ? ci.capabilities : [];
+    const capBadges = caps.map(c => `<span class="model-cap-badge">${capLabelMap[String(c).toLowerCase()] || c}</span>`).join('');
+    const priceIn = (ci.price_in !== undefined && ci.price_in !== null) ? ci.price_in : null;
+    const priceOut = (ci.price_out !== undefined && ci.price_out !== null) ? ci.price_out : null;
+    const priceHtml = (priceIn !== null || priceOut !== null)
+      ? `<span class="model-price">in <b>${priceIn !== null ? '¥' + priceIn : '-'}</b> · out <b>${priceOut !== null ? '¥' + priceOut : '-'}</b></span>`
+      : '<span class="model-price">--</span>';
+
     let lastStatusHtml = '';
     if (d.last_status === 'ok') {
       lastStatusHtml = `<span title="上次巡检：正常" style="display:inline-block;width:8px;height:8px;border-radius:50%;background:var(--success);margin-left:6px;"></span>`;
     } else if (d.last_status === 'fail' || d.last_status === 'error') {
       lastStatusHtml = `<span title="上次巡检：异常 (通常为提供商限流或报错)" style="display:inline-block;width:8px;height:8px;border-radius:50%;background:var(--danger);margin-left:6px;animation: pulse 2s infinite;"></span>`;
+    } else if (d.last_status === 'pending') {
+      lastStatusHtml = `<span title="还没检测到（等待巡检）" style="display:inline-block;width:8px;height:8px;border-radius:50%;background:var(--text-secondary);margin-left:6px;"></span>`;
     } else {
       lastStatusHtml = `<span title="上次巡检：等待中..." style="display:inline-block;width:8px;height:8px;border-radius:50%;background:var(--text-secondary);margin-left:6px;"></span>`;
     }
 
-    return `<tr>
+    const enKey = `${d.provider}||${d.model}`;
+    const isEnabled = window.modelEnabledMap[enKey] !== false;
+    const toggleBtn = `<button class="model-toggle-btn ${isEnabled ? 'enabled' : 'disabled'}" data-provider="${escAttr(d.provider)}" data-model="${escAttr(d.model)}" onclick="toggleModelFromBtn(this)">${isEnabled ? '● 启用' : '○ 停用'}</button>`;
+
+    return `<tr class="${isEnabled ? '' : 'model-disabled-row'}">
       <td>
         <div class="model-name" style="display: flex; align-items: center;">
           <span class="model-provider-badge">${d.provider}</span>
@@ -1399,19 +1710,21 @@ function renderStability() {
         ${descHtml}
       </td>
       <td>
+        ${tierBadge}${capBadges}
+      </td>
+      <td>
         <div class="avail-wrap">
           <span class="avail-bar">
-            <span class="avail-bar-fill" style="width:${pct}%;background:${barColor}"></span>
+            <span class="avail-bar-fill" style="width:${barWidth};background:${barColor}"></span>
           </span>
-          <span class="avail-text" style="color:${barColor}">${pct}%</span>
+          <span class="avail-text" style="color:${barColor}">${isPending ? '⚪ 未检测' : pct + '%'}</span>
         </div>
       </td>
       <td><span class="ctx-cell" data-model="${d.model}" title="点击修改上下文长度" style="cursor:pointer;color:var(--text-secondary);font-variant-numeric:tabular-nums;font-family:ui-monospace,monospace;font-size:12px;">${ctxLen === '--' ? '--' : ctxLen}</span></td>
+      <td>${priceHtml}</td>
       <td style="color:var(--text-secondary)">${d.checks}</td>
       <td style="font-variant-numeric:tabular-nums; font-size:12px;">
-        <span style="color:var(--success);font-weight:600">${d.ok}</span>
-        <span style="color:var(--text-secondary);margin:0 4px">/</span>
-        <span style="color:var(--danger);font-weight:600">${d.fail + d.error}</span>
+        ${isPending ? '<span style="color:var(--text-secondary)">— / —</span>' : `<span style="color:var(--success);font-weight:600">${d.ok}</span><span style="color:var(--text-secondary);margin:0 4px">/</span><span style="color:var(--danger);font-weight:600">${d.fail}</span>`}
       </td>
       <td class="latency ${d.avg_latency_ms && d.avg_latency_ms < 3000 ? 'fast' : d.avg_latency_ms && d.avg_latency_ms < 8000 ? 'medium' : ''}">${avgL}</td>
       <td class="latency" style="font-size:12px;">
@@ -1419,8 +1732,38 @@ function renderStability() {
         <span style="color:var(--text-secondary);margin:0 4px">~</span>
         <span style="color:var(--text-secondary)">${maxL}</span>
       </td>
+      <td>${toggleBtn}</td>
     </tr>`;
   }).join('');
+}
+
+function escAttr(s) {
+  return String(s).replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+}
+
+async function toggleModelFromBtn(btn) {
+  const provider = btn.dataset.provider;
+  const model = btn.dataset.model;
+  const targetEnabled = btn.classList.contains('disabled'); // 当前显示“停用”→ 目标为启用
+  const original = btn.innerText;
+  btn.disabled = true;
+  try {
+    const res = await apiFetch(`/api/providers/${encodeURIComponent(provider)}/toggle-model`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ model: model, enabled: targetEnabled })
+    });
+    if (res.ok) {
+      window.modelEnabledMap[`${provider}||${model}`] = targetEnabled;
+      renderStability();
+    } else {
+      alert('切换启用状态失败');
+    }
+  } catch (e) {
+    if (e.message !== 'Unauthorized') { console.error(e); alert('请求出错，请重试'); }
+  } finally {
+    btn.disabled = false;
+  }
 }
 
 async function checkAll() {
@@ -1439,7 +1782,7 @@ async function checkAll() {
   } finally {
     btn.innerHTML = originalHtml;
     btn.disabled = false;
-    load();
+    load(true);
   }
 }
 
@@ -1783,7 +2126,7 @@ async function deleteProvider(name) {
 }
 
 /* ============ 轮询与可见性 ============ */
-let loadTimer = null, pollTimer = null, detailTimer = null, callLogTimer = null;
+let loadTimer = null, pollTimer = null, detailTimer = null, callLogTimer = null, catalogTimer = null, budgetTimer = null;
 async function loadModelDetails() {
   try {
     const r = await apiFetch('/api/model-details');
@@ -1791,22 +2134,47 @@ async function loadModelDetails() {
     renderStability();
   } catch (e) { if (e.message !== 'Unauthorized') console.error("Failed to load model details:", e); }
 }
+async function loadModelCatalog() {
+  try {
+    const r = await apiFetch('/v1/models');
+    if (!r.ok) return;
+    const data = await r.json();
+    const arr = data.data || [];
+    const map = {};
+    arr.forEach(m => {
+      if (m && m.id) map[m.id] = m;
+      // 同时用原始模型名（含 provider/ 前缀）索引，与稳定性列表的 d.model 对齐，
+      // 否则 key 格式不一致（id 用 provider-model、d.model 用 provider/model）会全部落到「未分类」
+      if (m && m.model) map[m.model] = m;
+    });
+    modelCatalog = map;
+    renderStability();
+  } catch (e) { if (e.message !== 'Unauthorized') console.error("Failed to load model catalog:", e); }
+}
 function startPolling() {
   if (loadTimer) clearInterval(loadTimer);
   if (pollTimer) clearInterval(pollTimer);
   if (detailTimer) clearInterval(detailTimer);
+  if (catalogTimer) clearInterval(catalogTimer);
+  if (budgetTimer) clearInterval(budgetTimer);
   loadTimer = setInterval(load, 5000);
   pollTimer = setInterval(updatePollStatus, 3000);
   detailTimer = setInterval(loadModelDetails, 30000);
+  catalogTimer = setInterval(loadModelCatalog, 30000);
+  budgetTimer = setInterval(refreshBudgetBanner, 30000);
+  loadModelCatalog();
+  refreshBudgetBanner();
   callLogTimer = setInterval(() => {
-    const uv = document.getElementById('usage-view');
-    if (uv && uv.style.display !== 'none') loadCallLog();
+    const sv = document.getElementById('stats-view');
+    if (sv && sv.style.display !== 'none') loadCallLog();
   }, 5000);
 }
 function stopPolling() {
   if (loadTimer) { clearInterval(loadTimer); loadTimer = null; }
   if (pollTimer) { clearInterval(pollTimer); pollTimer = null; }
   if (detailTimer) { clearInterval(detailTimer); detailTimer = null; }
+  if (catalogTimer) { clearInterval(catalogTimer); catalogTimer = null; }
+  if (budgetTimer) { clearInterval(budgetTimer); budgetTimer = null; }
   if (callLogTimer) { clearInterval(callLogTimer); callLogTimer = null; }
 }
 document.addEventListener('visibilitychange', () => {
@@ -1815,43 +2183,106 @@ document.addEventListener('visibilitychange', () => {
 });
 
 function switchMainTab(tab) {
-  const monitorBtn = document.getElementById('tab-monitor');
-  const usageBtn = document.getElementById('tab-usage');
-  const monitorView = document.getElementById('monitor-view');
-  const usageView = document.getElementById('usage-view');
-  
-  if (tab === 'monitor') {
-    monitorBtn.style.background = 'var(--mac-window-bg)';
-    monitorBtn.style.boxShadow = '0 1px 3px rgba(0,0,0,0.1)';
-    monitorBtn.style.color = 'var(--text-primary)';
-    monitorBtn.style.fontWeight = '600';
-    
-    usageBtn.style.background = 'transparent';
-    usageBtn.style.boxShadow = 'none';
-    usageBtn.style.color = 'var(--text-secondary)';
-    usageBtn.style.fontWeight = '500';
-    
-    monitorView.style.display = 'block';
-    usageView.style.display = 'none';
-  } else {
-    usageBtn.style.background = 'var(--mac-window-bg)';
-    usageBtn.style.boxShadow = '0 1px 3px rgba(0,0,0,0.1)';
-    usageBtn.style.color = 'var(--text-primary)';
-    usageBtn.style.fontWeight = '600';
-    
-    monitorBtn.style.background = 'transparent';
-    monitorBtn.style.boxShadow = 'none';
-    monitorBtn.style.color = 'var(--text-secondary)';
-    monitorBtn.style.fontWeight = '500';
-    
-    monitorView.style.display = 'none';
-    usageView.style.display = 'block';
-    
+  // 两标签统一处理：激活态高亮 + 对应视图显隐
+  // 统计页（tab-stats）将「消耗统计」与「成本统计」合并在同一页展示
+  const tabs = [
+    { id: 'monitor', btn: 'tab-monitor', view: 'monitor-view' },
+    { id: 'stats',   btn: 'tab-stats',   view: 'stats-view' }
+  ];
+  tabs.forEach(t => {
+    const btn = document.getElementById(t.btn);
+    const view = document.getElementById(t.view);
+    const active = (t.id === tab);
+    btn.style.background = active ? 'var(--mac-window-bg)' : 'transparent';
+    btn.style.boxShadow = active ? '0 1px 3px rgba(0,0,0,0.1)' : 'none';
+    btn.style.color = active ? 'var(--text-primary)' : 'var(--text-secondary)';
+    btn.style.fontWeight = active ? '600' : '500';
+    view.style.display = active ? 'block' : 'none';
+  });
+
+  if (tab === 'stats') {
+    // 消耗统计 + 调用日志
     if (document.getElementById('usageOverview').innerHTML === '') {
       loadUsage();
     }
     loadCallLog();
+    // 统计页：消耗统计 + 成本统计共用时间范围选择器，默认高亮 statsDays
+    document.querySelectorAll('.stats-tab').forEach(b => {
+      const on = parseInt(b.dataset.days, 10) === statsDays;
+      b.classList.toggle('btn-primary', on);
+    });
+    if (document.getElementById('costOverview').innerHTML === '') {
+      loadCostDashboard();
+    }
   }
+}
+
+/* ============ 成本/用量仪表盘 ============ */
+function fmtCost(n) {
+  if (n == null) return '0.00';
+  return Number(n).toFixed(4);
+}
+function fmtInt(n) {
+  return (n || 0).toLocaleString('en-US');
+}
+async function loadCostDashboard() {
+  try {
+    const d = await (await apiFetch('/api/cost-dashboard?days=' + statsDays)).json();
+    if (!d.ok) { showToast('成本统计加载失败', 'error'); return; }
+    const total = d.total || {};
+    // 汇总卡
+    document.getElementById('costOverview').innerHTML = `
+      <div class="stat-card"><div class="sc-val">${fmtInt(total.requests)}</div><div class="sc-label">请求总数</div></div>
+      <div class="stat-card"><div class="sc-val">${fmtInt(total.prompt_tokens)}</div><div class="sc-label">输入 Token</div></div>
+      <div class="stat-card"><div class="sc-val">${fmtInt(total.completion_tokens)}</div><div class="sc-label">输出 Token</div></div>
+      <div class="stat-card"><div class="sc-val">$${fmtCost(total.cost_usd)}</div><div class="sc-label">累计成本(USD)</div></div>`;
+    // 预算卡
+    const b = d.budget || {};
+    const budgetEl = document.getElementById('costBudgetCard');
+    const budgetText = document.getElementById('costBudgetText');
+    if (!b.daily_limit_usd || b.daily_limit_usd <= 0) {
+      budgetEl.style.background = 'var(--mac-window-bg)';
+      budgetEl.style.border = '1px solid var(--mac-border)';
+      budgetEl.style.color = 'var(--text-secondary)';
+      budgetText.innerHTML = `💡 未设置每日预算上限。可在「⚙️ 网关设置 → 预算护栏」中设定上限，并结合上方「按模型/渠道」成本评估用量。`;
+    } else {
+      const pct = b.daily_limit_usd > 0 ? (b.daily_cost_usd / b.daily_limit_usd * 100) : 0;
+      const exceeded = b.daily_cost_usd >= b.daily_limit_usd;
+      const warn = pct >= 80;
+      const col = exceeded ? 'var(--danger)' : (warn ? 'var(--warning)' : 'var(--success)');
+      budgetEl.style.background = exceeded ? 'rgba(255,59,48,0.1)' : (warn ? 'rgba(255,149,0,0.1)' : 'rgba(40,205,65,0.1)');
+      budgetEl.style.border = '1px solid ' + (exceeded ? 'rgba(255,59,48,0.35)' : (warn ? 'rgba(255,149,0,0.35)' : 'rgba(40,205,65,0.3)'));
+      budgetEl.style.color = col;
+      budgetText.innerHTML = `💰 今日成本 <b>$${fmtCost(b.daily_cost_usd)}</b> / 上限 $${fmtCost(b.daily_limit_usd)}（${pct.toFixed(1)}%）· 剩余 $${fmtCost(b.remaining_usd)} · 动作：${b.action === 'block' ? '超限拦截' : '仅预警'}`;
+    }
+    // 渲染三个表
+    renderCostTable('costByProvider', d.by_provider, 'provider');
+    renderCostTable('costByModel', d.by_model, 'model');
+    renderCostTable('costByDay', d.by_day, 'date');
+  } catch (e) {
+    showToast('成本统计加载失败：' + e.message, 'error');
+  }
+}
+
+function renderCostTable(elId, data, keyLabel) {
+  const el = document.getElementById(elId);
+  const keys = Object.keys(data || {});
+  if (!keys.length) {
+    el.innerHTML = '<tr><td colspan="5" class="empty">该时间段暂无用量记录</td></tr>';
+    return;
+  }
+  // 按成本降序
+  keys.sort((a, b) => (data[b].cost_usd || 0) - (data[a].cost_usd || 0));
+  el.innerHTML = keys.map(k => {
+    const r = data[k] || {};
+    return `<tr>
+      <td>${escapeHtml(k)}</td>
+      <td>${fmtInt(r.requests)}</td>
+      <td>${fmtInt(r.prompt_tokens)}</td>
+      <td>${fmtInt(r.completion_tokens)}</td>
+      <td>$${fmtCost(r.cost_usd)}</td>
+    </tr>`;
+  }).join('');
 }
 
 /* ============ 路由配置 ============ */
@@ -1862,6 +2293,7 @@ function fmtCtx(n) {
   return String(n);
 }
 let routersData = {};
+let strategiesData = {};    // routerName -> strategy (quality/priority/least-latency/cost/loadbalance)
 let allModelOptions = [];   // [{provider, model}]
 
 async function loadVisionAssist() {
@@ -1908,8 +2340,407 @@ async function openRouterManager() {
     const r = await apiFetch('/api/routers');
     const d = await r.json();
     routersData = d.data || {};
-  } catch (e) { if (e.message !== 'Unauthorized') console.error(e); routersData = {}; }
-  renderRouterList();
+    strategiesData = d.strategies || {};
+  } catch (e) { if (e.message !== 'Unauthorized') console.error(e); routersData = {}; strategiesData = {}; }
+  // 3. 拉取参考库分类信息（用于路由成员能力徽标），完成后重渲染
+  loadModelCatalog().finally(() => renderRouterList());
+  // 4. 拉取别名映射
+  loadAliases();
+}
+
+function toggleRouterGroup(name) {
+  const el = document.querySelector('.router-group[data-name="' + name + '"]');
+  if (!el) return;
+  el.classList.toggle('collapsed');
+}
+
+/* ============ 别名映射（G8：友好名 → 模型/路由组/auto） ============ */
+let aliasesData = []; // [{name, target}]
+
+async function loadAliases() {
+  try {
+    const r = await apiFetch('/api/aliases');
+    const d = await r.json();
+    aliasesData = d.data || [];
+  } catch (e) { aliasesData = []; }
+  // 同步预设按钮状态
+  const presetOn = aliasesData.some(a => a.name === 'fast' && a.target === 'auto');
+  const btn = document.getElementById('aliasPresetFastBtn');
+  if (btn) {
+    btn.textContent = presetOn ? '✅ 已启用 fast → auto 预设（点击关闭）' : '⚡ 启用 fast → auto 预设';
+    btn.style.background = presetOn ? 'var(--success)' : '';
+    btn.style.color = presetOn ? '#fff' : '';
+  }
+  renderAliasList();
+}
+
+async function toggleAliasPreset() {
+  const hasPreset = aliasesData.some(a => a.name === 'fast' && a.target === 'auto');
+  if (hasPreset) {
+    aliasesData = aliasesData.filter(a => !(a.name === 'fast' && a.target === 'auto'));
+  } else {
+    aliasesData.push({ name: 'fast', target: 'auto' });
+  }
+  // 自动保存
+  const cleaned = aliasesData.filter(a => a.name.trim() && a.target.trim() && a.name.trim() !== a.target.trim());
+  try {
+    await apiFetch('/api/aliases', { method: 'POST', body: JSON.stringify(cleaned) });
+    aliasesData = cleaned;
+    renderAliasList();
+    showToast(hasPreset ? '已关闭 fast → auto 预设' : '已启用 fast → auto 预设', 'ok');
+  } catch (e) {
+    showToast('保存预设失败：' + e.message, 'error');
+  }
+  // 更新按钮状态
+  const presetOn = aliasesData.some(a => a.name === 'fast' && a.target === 'auto');
+  const btn = document.getElementById('aliasPresetFastBtn');
+  if (btn) {
+    btn.textContent = presetOn ? '✅ 已启用 fast → auto 预设（点击关闭）' : '⚡ 启用 fast → auto 预设';
+    btn.style.background = presetOn ? 'var(--success)' : '';
+    btn.style.color = presetOn ? '#fff' : '';
+  }
+}
+
+function renderAliasList() {
+  const container = document.getElementById('aliasListContainer');
+  if (!aliasesData.length) {
+    container.innerHTML = '<div class="empty" style="padding:8px;">暂无别名，点击「+ 添加别名」创建</div>';
+    return;
+  }
+  // 目标下拉：路由组 + auto + 所有模型
+  const targets = ['auto'].concat(Object.keys(routersData)).concat(allModelOptions.map(o => o.model));
+  const uniq = [...new Set(targets)];
+  container.innerHTML = aliasesData.map((a, i) => `
+    <div style="display:flex; gap:8px; align-items:center;">
+      <input type="text" value="${escapeHtml(a.name)}" placeholder="别名（如 fast）" oninput="aliasesData[${i}].name=this.value"
+        style="flex:1; padding:5px 8px; border:1px solid var(--mac-border); border-radius:6px; background:transparent; color:var(--text-primary); font-size:13px;">
+      <span style="color:var(--text-secondary);">→</span>
+      <input type="text" list="aliasTargetList" value="${escapeHtml(a.target)}" placeholder="目标（模型/路由组/auto）" oninput="aliasesData[${i}].target=this.value"
+        style="flex:1.4; padding:5px 8px; border:1px solid var(--mac-border); border-radius:6px; background:transparent; color:var(--text-primary); font-size:13px;">
+      <button class="btn" style="font-size:12px; padding:3px 8px; color:var(--danger);" onclick="aliasesData.splice(${i},1);renderAliasList()">✕</button>
+    </div>`).join('') +
+    `<datalist id="aliasTargetList">${uniq.map(t => `<option value="${escapeHtml(t)}">`).join('')}</datalist>`;
+}
+
+async function toggleAliasPreset() {
+  const hasPreset = aliasesData.some(a => a.name === 'fast' && a.target === 'auto');
+  if (hasPreset) {
+    aliasesData = aliasesData.filter(a => !(a.name === 'fast' && a.target === 'auto'));
+  } else {
+    aliasesData.push({ name: 'fast', target: 'auto' });
+  }
+  // 自动保存
+  const cleaned = aliasesData.filter(a => a.name.trim() && a.target.trim() && a.name.trim() !== a.target.trim());
+  try {
+    await apiFetch('/api/aliases', { method: 'POST', body: JSON.stringify(cleaned) });
+    aliasesData = cleaned;
+    renderAliasList();
+    showToast(hasPreset ? '已关闭 fast → auto 预设' : '已启用 fast → auto 预设', 'ok');
+  } catch (e) {
+    showToast('保存预设失败：' + e.message, 'error');
+  }
+  // 更新按钮状态
+  const presetOn = aliasesData.some(a => a.name === 'fast' && a.target === 'auto');
+  const btn = document.getElementById('aliasPresetFastBtn');
+  if (btn) {
+    btn.textContent = presetOn ? '✅ 已启用 fast → auto 预设（点击关闭）' : '⚡ 启用 fast → auto 预设';
+    btn.style.background = presetOn ? 'var(--success)' : '';
+    btn.style.color = presetOn ? '#fff' : '';
+  }
+}
+
+function addAliasRow() {
+  aliasesData.push({ name: '', target: '' });
+  renderAliasList();
+}
+
+async function saveAliases() {
+  const cleaned = aliasesData.filter(a => a.name.trim() && a.target.trim() && a.name.trim() !== a.target.trim());
+  try {
+    await apiFetch('/api/aliases', { method: 'POST', body: JSON.stringify(cleaned) });
+    aliasesData = cleaned;
+    renderAliasList();
+    showToast('别名已保存（' + cleaned.length + ' 条）', 'ok');
+  } catch (e) {
+    showToast('保存别名失败：' + e.message, 'error');
+  }
+}
+
+function escapeHtml(s) {
+  return String(s == null ? '' : s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+/* ============ 网关设置（缓存 / 预算 / 并发 / 钩子） ============ */
+let hooksData = []; // [{url, events, enabled, secret}]
+
+async function openGatewaySettings() {
+  document.getElementById('gatewayModal').classList.add('show');
+  try {
+    const [gs, hk] = await Promise.all([
+      (await apiFetch('/api/gateway-settings')).json(),
+      (await apiFetch('/api/hooks')).json()
+    ]);
+    const c = gs.cache || {}, b = gs.budget || {};
+    document.getElementById('gwCacheEnabled').checked = !!c.enabled;
+    document.getElementById('gwCacheTTL').value = c.ttl || 300;
+    document.getElementById('gwCacheMax').value = c.max_entries || 1000;
+    document.getElementById('gwCacheSemantic').checked = !!c.semantic;
+    document.getElementById('gwBudgetLimit').value = b.daily_limit_usd || 0;
+    document.getElementById('gwBudgetAction').value = b.action || 'warn';
+    document.getElementById('gwBudgetWarnPct').value = b.warning_pct || 80;
+    document.getElementById('gwMaxConcurrency').value = gs.max_concurrency || 0;
+    document.getElementById('gwStrictCap').checked = !!gs.strict_capability;
+    hooksData = hk.data || [];
+  } catch (e) {
+    if (e.message !== 'Unauthorized') showToast('加载网关设置失败：' + e.message, 'error');
+    hooksData = [];
+  }
+  renderHookList();
+  loadCacheStats();
+  refreshBudgetBanner(true);
+}
+
+async function loadCacheStats() {
+  const el = document.getElementById('gwCacheStats');
+  try {
+    const d = await (await apiFetch('/api/cache')).json();
+    const s = d.stats || {};
+    const rate = ((d.hit_rate || 0) * 100).toFixed(1);
+    el.innerHTML = `命中 <b>${s.hits || 0}</b>（其中近似命中 ${s.semantic_hits || 0}）· 未命中 ${s.misses || 0} · 命中率 <b>${rate}%</b> · 当前条目 ${s.entries || 0}`;
+  } catch (e) { el.textContent = '统计加载失败'; }
+}
+
+async function clearGatewayCache() {
+  try {
+    await apiFetch('/api/cache', { method: 'POST', body: JSON.stringify({ action: 'clear' }) });
+    showToast('缓存已清空', 'ok');
+    loadCacheStats();
+  } catch (e) { showToast('清空失败：' + e.message, 'error'); }
+}
+
+function renderHookList() {
+  const container = document.getElementById('hookListContainer');
+  if (!hooksData.length) {
+    container.innerHTML = '<div class="empty" style="padding:8px;">暂无钩子</div>';
+    return;
+  }
+  container.innerHTML = hooksData.map((h, i) => {
+    const evs = h.events || [];
+    return `<div style="display:flex; flex-direction:column; gap:6px; padding:10px; border:1px solid var(--mac-border); border-radius:8px;">
+      <div style="display:flex; gap:8px; align-items:center;">
+        <input type="text" value="${escapeHtml(h.url)}" placeholder="https://example.com/webhook" oninput="hooksData[${i}].url=this.value"
+          style="flex:1; padding:5px 8px; border:1px solid var(--mac-border); border-radius:6px; background:transparent; color:var(--text-primary); font-size:13px;">
+        <label class="hf-toggle"><input type="checkbox" ${h.enabled !== false ? 'checked' : ''} onchange="hooksData[${i}].enabled=this.checked"><span class="hf-switch"></span><span>启用</span></label>
+        <button class="btn" style="font-size:12px; padding:3px 8px; color:var(--danger);" onclick="hooksData.splice(${i},1);renderHookList()">✕</button>
+      </div>
+      <div style="display:flex; gap:14px; align-items:center; font-size:12.5px; flex-wrap:wrap;">
+        <label><input type="checkbox" ${evs.includes('request_done') ? 'checked' : ''} onchange="toggleHookEvent(${i},'request_done',this.checked)"> 成功事件</label>
+        <label><input type="checkbox" ${evs.includes('request_failed') ? 'checked' : ''} onchange="toggleHookEvent(${i},'request_failed',this.checked)"> 失败事件</label>
+        <input type="text" value="${escapeHtml(h.secret || '')}" placeholder="签名密钥（可选）" oninput="hooksData[${i}].secret=this.value"
+          style="flex:1; min-width:140px; padding:4px 8px; border:1px solid var(--mac-border); border-radius:6px; background:transparent; color:var(--text-primary); font-size:12px;">
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function toggleHookEvent(i, ev, on) {
+  const evs = new Set(hooksData[i].events || []);
+  on ? evs.add(ev) : evs.delete(ev);
+  hooksData[i].events = [...evs];
+}
+
+function addHookRow() {
+  hooksData.push({ url: '', events: ['request_done', 'request_failed'], enabled: true, secret: '' });
+  renderHookList();
+}
+
+async function saveGatewaySettings() {
+  const body = {
+    cache_enabled: document.getElementById('gwCacheEnabled').checked,
+    cache_ttl: parseInt(document.getElementById('gwCacheTTL').value) || 300,
+    cache_max_entries: parseInt(document.getElementById('gwCacheMax').value) || 1000,
+    cache_semantic: document.getElementById('gwCacheSemantic').checked,
+    budget_daily_limit: parseFloat(document.getElementById('gwBudgetLimit').value) || 0,
+    budget_action: document.getElementById('gwBudgetAction').value,
+    budget_warning_pct: parseInt(document.getElementById('gwBudgetWarnPct').value) || 80,
+    max_concurrency: parseInt(document.getElementById('gwMaxConcurrency').value) || 0,
+    strict_capability: document.getElementById('gwStrictCap').checked
+  };
+  const cleanedHooks = hooksData.filter(h => h.url && h.url.trim());
+  try {
+    await apiFetch('/api/gateway-settings', { method: 'POST', body: JSON.stringify(body) });
+    await apiFetch('/api/hooks', { method: 'POST', body: JSON.stringify(cleanedHooks) });
+    showToast('网关设置已保存', 'ok');
+    document.getElementById('gatewayModal').classList.remove('show');
+    refreshBudgetBanner(true);
+  } catch (e) {
+    showToast('保存失败：' + e.message, 'error');
+  }
+}
+
+/* ============ 虚拟密钥（子密钥）管理 ============ */
+let vkeysData = []; // [{id,name,key,enabled,quota_requests,quota_tokens,allowed_models,notes,created_at,usage:{requests,tokens}}]
+
+function openVKeyModal() {
+  document.getElementById('vkeyModal').classList.add('show');
+  // 重置新建表单与结果
+  document.getElementById('vkName').value = '';
+  document.getElementById('vkQuotaReq').value = '';
+  document.getElementById('vkQuotaTok').value = '';
+  document.getElementById('vkAllowed').value = '';
+  const res = document.getElementById('vkCreateResult');
+  res.style.display = 'none';
+  res.innerHTML = '';
+  loadVKeys();
+}
+
+async function copyVKey(id, btn) {
+  try {
+    const r = await apiFetch('/api/vkeys/' + encodeURIComponent(id) + '/reveal');
+    const d = await r.json();
+    if (!d.ok || !d.key) { showToast('获取密钥失败', 'error'); return; }
+    copyText(d.key, btn);
+    showToast('完整密钥已复制（请妥善保管）', 'ok');
+  } catch (e) {
+    showToast('复制失败：' + e.message, 'error');
+  }
+}
+
+async function loadVKeys() {
+  const container = document.getElementById('vkeyList');
+  container.innerHTML = '<div class="empty">加载中…</div>';
+  try {
+    const d = await (await apiFetch('/api/vkeys')).json();
+    vkeysData = d.data || [];
+    if (!vkeysData.length) {
+      container.innerHTML = '<div class="empty">还没有虚拟密钥，使用上方表单创建一个</div>';
+      return;
+    }
+    container.innerHTML = vkeysData.map((vk, i) => {
+      const quotaReq = vk.quota_requests > 0 ? `${fmtInt(vk.usage.requests)}/${fmtInt(vk.quota_requests)}` : `${fmtInt(vk.usage.requests)}/∞`;
+      const quotaTok = vk.quota_tokens > 0 ? `${fmtInt(vk.usage.tokens)}/${fmtInt(vk.quota_tokens)}` : `${fmtInt(vk.usage.tokens)}/∞`;
+      const allowed = (vk.allowed_models && vk.allowed_models.length) ? vk.allowed_models.map(escapeHtml).join('、') : '全部模型';
+      const disabledCls = vk.enabled ? '' : ' style="opacity:0.5;"';
+      return `<div class="rg-member"${disabledCls}>
+        <div style="flex:1; min-width:0;">
+          <div style="display:flex; align-items:center; gap:8px;">
+            <b style="font-size:13px;">${escapeHtml(vk.name || '(未命名)')}</b>
+            <code style="font-size:11px; color:var(--text-secondary);">${escapeHtml(vk.key)}</code>
+            <button class="btn" style="padding:2px 8px;font-size:11px;" onclick="copyVKey('${escapeHtml(vk.id)}', this)" title="复制完整密钥">📋</button>
+            ${vk.enabled ? '' : '<span style="font-size:11px; color:var(--danger);">已禁用</span>'}
+          </div>
+          <div style="font-size:11.5px; color:var(--text-secondary); margin-top:3px; line-height:1.5;">
+            请求 ${quotaReq} · Token ${quotaTok} · 模型：${allowed}
+            ${vk.notes ? ' · 备注：' + escapeHtml(vk.notes) : ''}
+          </div>
+        </div>
+        <label class="hf-toggle" title="启用/禁用该密钥" style="margin:0 8px;">
+          <input type="checkbox" ${vk.enabled ? 'checked' : ''} onchange="toggleVKey('${escapeHtml(vk.id)}', this.checked)"><span class="hf-switch"></span>
+        </label>
+        <button class="rg-rm" title="删除" onclick="deleteVKey('${escapeHtml(vk.id)}')">×</button>
+      </div>`;
+    }).join('');
+  } catch (e) {
+    container.innerHTML = '<div class="empty" style="color:var(--danger)">加载失败：' + escapeHtml(e.message) + '</div>';
+  }
+}
+
+async function createVKey() {
+  const name = document.getElementById('vkName').value.trim();
+  const qr = parseInt(document.getElementById('vkQuotaReq').value) || 0;
+  const qt = parseInt(document.getElementById('vkQuotaTok').value) || 0;
+  const allowedRaw = document.getElementById('vkAllowed').value.trim();
+  const allowed = allowedRaw ? allowedRaw.split(',').map(s => s.trim()).filter(Boolean) : [];
+  const res = document.getElementById('vkCreateResult');
+  try {
+    const r = await apiFetch('/api/vkeys', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name, quota_requests: qr, quota_tokens: qt, allowed_models: allowed })
+    });
+    const d = await r.json();
+    if (!r.ok || !d.ok || !d.key) {
+      res.style.display = 'block';
+      res.style.background = 'rgba(255,59,48,0.1)';
+      res.style.border = '1px solid rgba(255,59,48,0.3)';
+      res.innerHTML = '创建失败：' + escapeHtml(d.error || '未知错误');
+      return;
+    }
+    res.style.display = 'block';
+    res.style.background = 'var(--success-bg)';
+    res.style.border = '1px solid rgba(40,205,65,0.3)';
+    res.innerHTML = `<div style="font-weight:600; margin-bottom:6px;">✅ 密钥已生成（仅此一次显示，请立即复制保存）</div>
+      <div style="display:flex; gap:8px; align-items:center;">
+        <code id="vkNewKey" style="flex:1; word-break:break-all; font-size:12px; background:rgba(0,0,0,0.04); padding:6px 8px; border-radius:6px;">${escapeHtml(d.key)}</code>
+        <button class="btn" style="font-size:12px; padding:4px 10px;" onclick="copyText(document.getElementById('vkNewKey').innerText, this)">复制</button>
+      </div>`;
+    // 清空表单
+    document.getElementById('vkName').value = '';
+    document.getElementById('vkQuotaReq').value = '';
+    document.getElementById('vkQuotaTok').value = '';
+    document.getElementById('vkAllowed').value = '';
+    loadVKeys();
+  } catch (e) {
+    res.style.display = 'block';
+    res.style.background = 'rgba(255,59,48,0.1)';
+    res.style.border = '1px solid rgba(255,59,48,0.3)';
+    res.innerHTML = '创建失败：' + escapeHtml(e.message);
+  }
+}
+
+async function toggleVKey(id, enabled) {
+  try {
+    const r = await apiFetch('/api/vkeys', {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ id, enabled })
+    });
+    const d = await r.json();
+    if (!r.ok || d.status !== 'ok') { showToast('更新失败', 'error'); loadVKeys(); return; }
+    showToast(enabled ? '密钥已启用' : '密钥已禁用', 'ok');
+    loadVKeys();
+  } catch (e) {
+    showToast('更新失败：' + e.message, 'error');
+    loadVKeys();
+  }
+}
+
+async function deleteVKey(id) {
+  if (!confirm('确定删除该虚拟密钥？删除后使用该密钥的应用将立即无法访问。')) return;
+  try {
+    const r = await apiFetch('/api/vkeys?id=' + encodeURIComponent(id), { method: 'DELETE' });
+    const d = await r.json();
+    if (!r.ok || d.status !== 'ok') { showToast('删除失败', 'error'); return; }
+    showToast('已删除虚拟密钥', 'ok');
+    loadVKeys();
+  } catch (e) {
+    showToast('删除失败：' + e.message, 'error');
+  }
+}
+
+/* ============ 预算/余额预警 banner ============ */
+async function refreshBudgetBanner(force) {
+  const el = document.getElementById('budgetBanner');
+  try {
+    const d = await (await apiFetch('/api/budget-status')).json();
+    const st = d.data || {};
+    if (!st.limit || st.status === 'ok') { el.style.display = 'none'; return; }
+    const spent = (st.daily_total || 0).toFixed(4);
+    const limit = (st.limit || 0).toFixed(2);
+    if (st.status === 'exceeded') {
+      el.style.display = 'flex';
+      el.style.background = 'rgba(255,59,48,0.1)';
+      el.style.border = '1px solid rgba(255,59,48,0.35)';
+      el.style.color = 'var(--danger)';
+      el.innerHTML = `⛔ <b>今日成本已超预算：</b>$${spent} / $${limit}` + (st.blocked ? '，已启用拦截 —— 新请求将被拒绝（明日自动恢复，或到「网关设置」调高上限）' : '（仅预警模式，仍在放行）');
+    } else {
+      el.style.display = 'flex';
+      el.style.background = 'rgba(255,149,0,0.1)';
+      el.style.border = '1px solid rgba(255,149,0,0.35)';
+      el.style.color = 'var(--warning)';
+      el.innerHTML = `⚠️ <b>成本预警：</b>今日已消耗 $${spent}，达到预算 $${limit} 的 ${st.warning_pct}% 预警线`;
+    }
+  } catch (e) { if (force) el.style.display = 'none'; }
 }
 
 let _visionModelSet = new Set();
@@ -1981,32 +2812,146 @@ function renderRouterList() {
   const container = document.getElementById('routerListContainer');
   const names = Object.keys(routersData);
   if (names.length === 0) {
-    container.innerHTML = '<div class="empty">暂无路由组，请在上方输入名称后点击"+ 添加路由"</div>';
+    container.innerHTML = '<div class="empty">暂无路由组，请在上方输入名称后点击「+ 添加路由」</div>';
     return;
   }
   if (allModelOptions.length === 0) {
     container.innerHTML = '<div class="empty" style="color:var(--danger)">未获取到任何模型，请先配置上游提供商</div>';
     return;
   }
+  const capLabel = c => ({ text: '文本', vision: '视觉', reasoning: '推理', image: '图像', audio: '音频', embedding: '嵌入' }[String(c).toLowerCase()] || c);
   container.innerHTML = names.map(name => {
-    const selected = new Set(routersData[name] || []);
-    const boxes = allModelOptions.map(opt => {
-      const checked = selected.has(opt.model) ? 'checked' : '';
-      const ctx = (modelDetails[opt.model] || {}).context_length;
-      const ctxStr = ctx ? ' · ' + ctx : '';
-      return `<label class="model-checkbox-item" style="padding:6px 10px;margin-bottom:4px;">
-        <input type="checkbox" class="router-model-cb" data-router="${name}" value="${opt.model}" ${checked}>
-        <div class="model-checkbox-label" style="font-size:13px;"><span class="model-provider-badge">${opt.provider}</span>${opt.model}<span style="color:var(--text-secondary);font-size:11px;margin-left:4px;">${ctxStr}</span></div>
-      </label>`;
-    }).join('');
-    return `<div style="border:1px solid var(--mac-border);border-radius:8px;padding:12px;background:rgba(255,255,255,0.4);">
-      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
-        <div style="font-weight:600;font-size:14px;">🔀 ${name} <span style="font-size:11px;color:var(--text-secondary);font-weight:400;">(客户端 model 字段填这个名称即可命中)</span></div>
-        <button class="btn" style="padding:3px 8px;font-size:11px;color:var(--danger);" onclick="removeRouterGroup('${name}')">删除</button>
+    const members = routersData[name] || [];
+    const strategy = strategiesData[name] || 'quality';
+    const isClassify = strategy === 'classify';
+    let memberRows, addBlock, hintBlock;
+
+    if (isClassify) {
+      // 内容分类路由：成员写成 cat=group，cat∈{vision,code,long,reasoning,general}，group 为路由组名
+      memberRows = members.length
+        ? members.map(m => `
+          <div class="rg-member">
+            <span class="rg-name">${escapeHtml(m)}</span>
+            <button class="rg-rm" title="移除" onclick="removeRouterMember('${name}','${encodeURIComponent(m)}')">×</button>
+          </div>`).join('')
+        : '<div class="rg-empty">尚未添加分类规则，下方输入 <code>cat=group</code> 后点击「+ 添加」</div>';
+      addBlock = `
+        <input type="text" id="rg-add-${name}" placeholder="cat=group（如 code=coders / vision=视觉 / default=general）" style="flex:1; padding:4px 8px; border:1px solid var(--mac-border); border-radius:6px; background:transparent; color:var(--text-primary); font-size:12px;">
+        <button class="btn btn-primary" style="padding:4px 10px;font-size:12px;" onclick="addClassifyMember('${name}')">+ 添加</button>`;
+      hintBlock = '每条规则格式 <b>分类=路由组</b>。可选分类：<code>vision</code>(带图) / <code>code</code>(代码) / <code>long</code>(长文&gt;4000字) / <code>reasoning</code>(推理) / <code>general</code>(兜底)。<b>group</b> 必须是一个已存在的路由组名称。请求先按内容分类，再转发到对应路由组；未命中任何分类时走 <code>general</code> 或 <code>default</code>。';
+    } else {
+      memberRows = members.length
+        ? members.map(m => {
+            const opt = allModelOptions.find(o => o.model === m);
+            const prov = opt ? opt.provider : '';
+            const ci = modelCatalog[m] || {};
+            const caps = Array.isArray(ci.capabilities) ? ci.capabilities : [];
+            const capStr = caps.length ? ' · ' + caps.map(capLabel).join('/') : '';
+            return `<div class="rg-member" draggable="true" data-model="${m}" ondragstart="onRouterMemberDragStart(event,'${name}','${encodeURIComponent(m)}')" ondragover="onRouterMemberDragOver(event)" ondrop="onRouterMemberDrop(event,'${name}','${encodeURIComponent(m)}')" ondragend="onRouterMemberDragEnd(event)">
+              <span class="rg-handle" title="拖动调整优先级">⠿</span>
+              <span class="rg-name"><span class="model-provider-badge">${prov}</span>${m}${capStr}</span>
+              <button class="rg-rm" title="移除" onclick="removeRouterMember('${name}','${encodeURIComponent(m)}')">×</button>
+            </div>`;
+          }).join('')
+        : '<div class="rg-empty">尚未添加模型，下方选择后点击「+ 添加模型」</div>';
+
+      // 可添加模型下拉（排除已选）
+      const selectedSet = new Set(members);
+      const availableOpts = allModelOptions
+        .filter(o => !selectedSet.has(o.model))
+        .map(o => `<option value="${o.model}">${o.provider} / ${o.model}</option>`).join('');
+
+      addBlock = `
+        <select id="rg-add-${name}">${availableOpts || '<option value="">（无更多可用模型）</option>'}</select>
+        <button class="btn btn-primary" style="padding:4px 10px;font-size:12px;" onclick="addRouterMember('${name}')">+ 添加模型</button>`;
+      hintBlock = '拖动 ⠿ 调整顺序：<b>严格优先级</b>策略按此顺序依次尝试；其余策略作为加权参考。客户端 model 字段填「' + name + '」即可命中本路由组。';
+    }
+
+    return `<div class="router-group" data-name="${name}">
+      <div class="rg-head">
+        <div class="rg-title" onclick="toggleRouterGroup('${name}')" style="cursor:pointer;" title="点击折叠/展开">🔀 ${name}</div>
+        <div style="display:flex;gap:6px;align-items:center;">
+          <select class="rg-strategy" onchange="onStrategyChange('${name}', this.value)" title="路由策略" style="padding:4px 8px;border-radius:6px;border:1px solid var(--mac-border);background:var(--mac-window-bg);color:var(--text-primary);font-size:12px;cursor:pointer;">
+            <option value="quality"${strategy === 'quality' ? ' selected' : ''}>质量优先</option>
+            <option value="priority"${strategy === 'priority' ? ' selected' : ''}>严格优先级</option>
+            <option value="least-latency"${strategy === 'least-latency' ? ' selected' : ''}>最低延迟</option>
+            <option value="cost"${strategy === 'cost' ? ' selected' : ''}>最低成本</option>
+            <option value="loadbalance"${strategy === 'loadbalance' ? ' selected' : ''}>负载均衡</option>
+            <option value="classify"${strategy === 'classify' ? ' selected' : ''}>内容分类</option>
+          </select>
+          <button class="btn" style="padding:3px 8px;font-size:11px;color:var(--danger);" onclick="removeRouterGroup('${name}')">删除</button>
+        </div>
       </div>
-      <div style="display:flex;flex-direction:column;gap:4px;max-height:220px;overflow-y:auto;">${boxes}</div>
+      <div class="rg-members" id="rg-members-${name}">${memberRows}</div>
+      <div class="rg-add" style="display:flex; gap:8px; align-items:center;">${addBlock}</div>
+      <div class="rg-hint">${hintBlock}</div>
     </div>`;
   }).join('');
+}
+
+function onStrategyChange(name, val) {
+  strategiesData[name] = val;
+  renderRouterList(); // 重新渲染以切换「模型下拉」/「cat=group 输入」两种成员录入方式
+}
+
+function addRouterMember(name) {
+  const sel = document.getElementById('rg-add-' + name);
+  if (!sel) return;
+  const m = sel.value;
+  if (!m) return;
+  if (!(routersData[name] || []).includes(m)) {
+    if (!routersData[name]) routersData[name] = [];
+    routersData[name].push(m);
+  }
+  renderRouterList();
+}
+
+// 内容分类路由：成员格式 cat=group（如 code=coders / vision=视觉 / default=general）
+function addClassifyMember(name) {
+  const inp = document.getElementById('rg-add-' + name);
+  if (!inp) return;
+  const raw = inp.value.trim();
+  if (!raw) return;
+  if (!/^[^=\s]+=.*\S$/.test(raw)) {
+    showToast('格式应为 cat=group（如 code=coders）', 'warn');
+    return;
+  }
+  if (!(routersData[name] || []).includes(raw)) {
+    if (!routersData[name]) routersData[name] = [];
+    routersData[name].push(raw);
+  }
+  renderRouterList();
+}
+
+function removeRouterMember(name, model) {
+  const m = decodeURIComponent(model);
+  routersData[name] = (routersData[name] || []).filter(x => x !== m);
+  renderRouterList();
+}
+
+// 拖拽排序（调整路由组成员优先级）
+let _dragRouter = null, _dragModel = null;
+function onRouterMemberDragStart(e, router, model) {
+  _dragRouter = router; _dragModel = decodeURIComponent(model);
+  e.currentTarget.classList.add('dragging');
+  try { e.dataTransfer.setData('text/plain', _dragModel); e.dataTransfer.effectAllowed = 'move'; } catch (err) {}
+}
+function onRouterMemberDragOver(e) { e.preventDefault(); }
+function onRouterMemberDragEnd(e) { e.currentTarget.classList.remove('dragging'); }
+function onRouterMemberDrop(e, router, targetModel) {
+  e.preventDefault();
+  const target = decodeURIComponent(targetModel);
+  if (_dragRouter !== router || !_dragModel || _dragModel === target) return;
+  const arr = routersData[router] || [];
+  const from = arr.indexOf(_dragModel);
+  if (from < 0) return;
+  arr.splice(from, 1);
+  let to = arr.indexOf(target);
+  if (to < 0) to = arr.length;
+  arr.splice(to, 0, _dragModel);
+  routersData[router] = arr;
+  _dragRouter = null; _dragModel = null;
+  renderRouterList();
 }
 
 function addRouterGroup() {
@@ -2014,6 +2959,7 @@ function addRouterGroup() {
   if (!name) { showToast('请输入路由名称', 'warn'); return; }
   if (routersData.hasOwnProperty(name)) { showToast('该路由名称已存在', 'warn'); return; }
   routersData[name] = [];
+  strategiesData[name] = 'quality';
   document.getElementById('newRouterName').value = '';
   renderRouterList();
 }
@@ -2021,27 +2967,24 @@ function addRouterGroup() {
 function removeRouterGroup(name) {
   if (!confirm('确定删除路由组「' + name + '」？')) return;
   delete routersData[name];
+  delete strategiesData[name];
   renderRouterList();
 }
 
 async function saveRouters() {
-  // 先从 DOM 收集勾选状态
-  const collected = {};
-  document.querySelectorAll('.router-model-cb').forEach(cb => {
-    const router = cb.dataset.router;
-    if (!collected[router]) collected[router] = [];
-    if (cb.checked) collected[router].push(cb.value);
-  });
-  // 合并：保留 collected 里没有出现过的路由组（空数组）
-  Object.keys(routersData).forEach(k => {
-    if (!collected.hasOwnProperty(k)) collected[k] = routersData[k] || [];
-  });
-  routersData = collected;
+  // 组装为后端可识别的数组格式 [{name, members, strategy}]
+  const payload = Object.keys(routersData)
+    .filter(name => name !== 'auto')
+    .map(name => ({
+      name: name,
+      members: routersData[name] || [],
+      strategy: strategiesData[name] || 'quality'
+    }));
   try {
     const r = await apiFetch('/api/routers', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(routersData)
+      body: JSON.stringify(payload)
     });
     if (r.ok) showToast('路由配置已保存', 'ok');
     else { showToast('保存失败', 'error'); }
@@ -2477,7 +3420,7 @@ async function checkUpdate(silent) {
     const r = await apiFetch('/api/check-update');
     const d = await r.json();
     if (!d.ok || !d.has_update) {
-      if (!silent) { showToast('已是最新版本 v' + (d.current || '1.0.0-r20260722'), 'ok'); }
+      if (!silent) { showToast('已是最新版本 v' + (d.current || '1.5.3'), 'ok'); }
       return;
     }
     _updateInfo = d;
