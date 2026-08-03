@@ -1,6 +1,7 @@
 package api
 
 import (
+	"bytes"
 	"crypto/sha256"
 	"encoding/json"
 	"fmt"
@@ -9,8 +10,8 @@ import (
 	"net/http"
 	"net/url"
 	"os"
-	"os/exec"
 	"path/filepath"
+	"regexp"
 	"sort"
 	"strconv"
 	"strings"
@@ -27,10 +28,20 @@ import (
 
 // NewBypassClient 创建绕过本地/内网代理的 HTTP 客户端（供本包及 main 复用）。
 // 绕过判定逻辑统一走 internal/netutil，避免各包复制粘贴后逻辑跑偏。
+// 内置 SSRF 防护（默认模式）：拦截回环/链路本地/云元数据(169.254.169.254)，
+// 放行 RFC1918 私网以兼容局域网自托管场景。与 proxy 层 newLocalBypassClient 对齐。
 func NewBypassClient(timeout time.Duration) *http.Client {
 	return &http.Client{
-		Timeout:   timeout,
-		Transport: &http.Transport{Proxy: netutil.BypassProxyFunc},
+		Timeout: timeout,
+		Transport: &http.Transport{
+			Proxy:                 netutil.BypassProxyFunc,
+			DialContext:           netutil.SSRFSafeDialContext(func() bool { return false }),
+			MaxIdleConns:          100,
+			MaxIdleConnsPerHost:   20,
+			IdleConnTimeout:       90 * time.Second,
+			TLSHandshakeTimeout:   10 * time.Second,
+			ResponseHeaderTimeout: 30 * time.Second,
+		},
 	}
 }
 
@@ -77,6 +88,7 @@ type AdminHandler struct {
 	appDir            string
 	announcementURL   string
 	announcementCache struct {
+		mu      sync.Mutex // P2-6: 保护并发读写
 		content string
 		ts      time.Time
 	}
@@ -86,18 +98,20 @@ type AdminHandler struct {
 		hours int
 		ts    time.Time
 	}
-	uciTool       *UCITool
-	reloadConfig  func() (*config.Config, error)
-	providersPath string
-	configPath    string
-	meta          MetaStoreInterface
-	modelCache    ModelCacheInterface
-	cacheCtl      CacheControl  // 响应缓存运行时（统计/清空），main.go 注入
-	budgetCtl     BudgetControl // 预算运行时（当日成本/状态），main.go 注入
-	vault         *storage.Vault    // 密钥保险库（api_key AES 加密落 UCI），main.go 注入
-	priceSync     *engine.PriceSync // 价格自动同步器（models.dev），main.go 注入
-	vkeyStore     *storage.VKeyStore // 虚拟密钥（子密钥）存储，main.go 注入
-	cat           *engine.Catalog   // 模型参考库（成本仪表盘价格来源），main.go 注入
+	uciTool        *UCITool
+	reloadConfig   func() (*config.Config, error)
+	providersPath  string
+	configPath     string
+	meta           MetaStoreInterface
+	modelCache     ModelCacheInterface
+	cacheCtl       CacheControl           // 响应缓存运行时（统计/清空），main.go 注入
+	budgetCtl      BudgetControl          // 预算运行时（当日成本/状态），main.go 注入
+	vault          *storage.Vault         // 密钥保险库（api_key AES 加密落 UCI），main.go 注入
+	priceSync      *engine.PriceSync      // 价格自动同步器（models.dev），main.go 注入
+	freeModelGuard *engine.FreeModelGuard // 免费模型自动巡检器，main.go 注入
+	vkeyStore      *storage.VKeyStore     // 虚拟密钥（子密钥）存储，main.go 注入
+	cat            *engine.Catalog        // 模型参考库（成本仪表盘价格来源），main.go 注入
+	circuits       *engine.CircuitPool    // 熔断器池（C4 锁定状态查询），main.go 注入
 }
 
 // SetVKeyStore 注入虚拟密钥存储（/api/vkeys 端点）
@@ -110,6 +124,11 @@ func (h *AdminHandler) SetCatalog(c *engine.Catalog) {
 	h.cat = c
 }
 
+// SetCircuits 注入熔断器池（C4 锁定状态查询，/api/check/all 显示 🔒）
+func (h *AdminHandler) SetCircuits(cp *engine.CircuitPool) {
+	h.circuits = cp
+}
+
 // SetVault 注入密钥保险库（写 UCI 时对 api_key 加密）
 func (h *AdminHandler) SetVault(v *storage.Vault) {
 	h.vault = v
@@ -118,6 +137,46 @@ func (h *AdminHandler) SetVault(v *storage.Vault) {
 // SetPriceSync 注入价格同步器（/api/price-sync 端点）
 func (h *AdminHandler) SetPriceSync(ps *engine.PriceSync) {
 	h.priceSync = ps
+}
+
+// SetFreeModelGuard 注入免费模型巡检器（/api/free-model-guard 端点）
+func (h *AdminHandler) SetFreeModelGuard(g *engine.FreeModelGuard) {
+	h.freeModelGuard = g
+}
+
+// UpdateProviderModels 更新指定 provider 的模型列表（供 FreeModelGuard 回调使用）
+func (h *AdminHandler) UpdateProviderModels(name string, models []string) error {
+	if h.uciTool == nil {
+		return fmt.Errorf("uci not available")
+	}
+	sectionNames, err := h.uciTool.GetSectionNames("provider")
+	if err != nil {
+		return err
+	}
+	var sectionName string
+	for _, sn := range sectionNames {
+		opts, err := h.uciTool.GetOptions("provider", sn)
+		if err != nil {
+			continue
+		}
+		if opts["name"] == name {
+			sectionName = sn
+			break
+		}
+	}
+	if sectionName == "" {
+		return fmt.Errorf("provider %q not found", name)
+	}
+	if err := h.uciTool.SetList("provider", sectionName, "models", models); err != nil {
+		return err
+	}
+	if h.reloadConfig != nil {
+		if newCfg, err := h.reloadConfig(); err == nil {
+			h.cfg.Store(newCfg)
+		}
+	}
+	h.notifyProvidersChanged()
+	return nil
 }
 
 // encryptKey 写 UCI 前加密 api_key（vault 未注入/主密钥不可用时降级明文，功能优先）
@@ -147,6 +206,10 @@ func NewAdminHandler(cfg *config.Config, history *storage.History, usage *storag
 	// 初始化 UCI 工具（如果 uci 命令可用）
 	if IsUCIAvailable() {
 		h.uciTool = NewUCITool("model-gateway")
+		// S6：注入 uci 工作目录，避免强假��� /etc/config 在 PATH 中
+		if cfg != nil && cfg.UciDir() != "" {
+			h.uciTool.SetDir(cfg.UciDir())
+		}
 	}
 
 	return h
@@ -175,6 +238,8 @@ func (h *AdminHandler) RegisterRoutes(mux *http.ServeMux) {
 	mux.HandleFunc("/api/providers/verify-key", h.handleVerifyKey)
 	mux.HandleFunc("/api/providers/preset", h.handlePreset)
 	mux.HandleFunc("/api/preset-info", h.handlePresetInfo)
+	mux.HandleFunc("/api/provider-market", h.handleProviderMarket)
+	mux.HandleFunc("/api/provider/probe", h.handleProviderProbe)
 	mux.HandleFunc("/api/providers/", h.handleProviderRoutes)
 	mux.HandleFunc("/api/routers", h.handleRouters)
 	mux.HandleFunc("/api/history", h.handleHistory)
@@ -199,29 +264,11 @@ func (h *AdminHandler) RegisterRoutes(mux *http.ServeMux) {
 	mux.HandleFunc("/api/vkeys", h.handleVKeys)
 	mux.HandleFunc("/api/vkeys/", h.handleVKeys) // 子路径 /api/vkeys/{id}/reveal
 	mux.HandleFunc("/api/cost-dashboard", h.handleCostDashboard)
+	// G4 提示词模板 CRUD（走 adminAuth 鉴权；HandleTemplates 内部再校验一次 requireAdmin）
+	mux.HandleFunc("/api/templates", h.HandleTemplates)
+	mux.HandleFunc("/api/templates/", h.HandleTemplates)
 	// 三缺口端点：别名 / 缓存 / 钩子·预算·并发（gateway_ext.go）
 	h.registerGatewayExtRoutes(mux)
-}
-
-// sameOrigin 判断请求是否来自本网关自带的 Web 面板（同源）。
-// 面板由本服务同源提供，浏览器 fetch 会带上与请求 host 一致的 Origin/Referer；
-// 而局域网内匿名 curl（无 Origin）或跨站页面（Origin 不符，且被浏览器 CORS 拦截）不会拿到完整密钥。
-// 据此在匿名 GET /api/config 中仅对同源请求返回完整 admin_key，避免密钥被随意读取（修复 #1）。
-func sameOrigin(r *http.Request) bool {
-	host := r.Host // 例如 192.168.1.1:12211
-	if origin := r.Header.Get("Origin"); origin != "" {
-		if u, err := url.Parse(origin); err == nil && u.Host == host {
-			return true
-		}
-		return false
-	}
-	if referer := r.Header.Get("Referer"); referer != "" {
-		if u, err := url.Parse(referer); err == nil && u.Host == host {
-			return true
-		}
-	}
-	// 既无 Origin 也无 Referer（如直接 curl）：视为匿名，不返回完整密钥
-	return false
 }
 
 // handleConfig 处理 /api/config
@@ -230,10 +277,13 @@ func (h *AdminHandler) handleConfig(w http.ResponseWriter, r *http.Request) {
 
 	switch r.Method {
 	case http.MethodGet:
-		// 安全：仅在同源（本面板）请求时返回完整 admin_key，避免局域网内匿名读取密钥（修复 #1）。
-		// 跨站或直接 curl 等无 Origin / Origin 不符的请求，仅返回掩码，密钥不落地。
+		// 安全（P0 修复）：完整 admin_key 仅在请求携带合法 Bearer admin_key 时返回。
+		// 旧版靠 Origin/Referer 判"同源"——这两个头客户端完全可控（curl -H "Origin: ..." 即可伪造），
+		// 等于把管理密钥裸奔给局域网内任何人。现在改为标准鉴权：未带密钥一律只给掩码。
+		// 面板首次访问需人工输入一次密钥（可从 LuCI 或 uci get model-gateway.settings.admin_key 获取），
+		// 之后由前端 localStorage 记住，体验不受影响。
 		adminKey := "sk-local-****"
-		if sameOrigin(r) {
+		if h.requireAdmin(r) {
 			adminKey = h.cfg.Load().AdminKey()
 		}
 		_ = json.NewEncoder(w).Encode(map[string]interface{}{
@@ -245,85 +295,9 @@ func (h *AdminHandler) handleConfig(w http.ResponseWriter, r *http.Request) {
 			"vision_router":   h.cfg.Load().VisionRouter(),
 			"disabled_models": h.cfg.Load().DisabledModels(),
 		})
-	case http.MethodPost:
-		h.handleConfigPost(w, r)
 	default:
 		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
 	}
-}
-
-// handleConfigPost 持久化配置到 UCI
-func (h *AdminHandler) handleConfigPost(w http.ResponseWriter, r *http.Request) {
-	var req struct {
-		Port           int      `json:"port"`
-		AdminKey       string   `json:"admin_key"`
-		PollInterval   int      `json:"poll_interval"`
-		Headless       bool     `json:"headless"`
-		VisionRouter   string   `json:"vision_router"`
-		DisabledModels []string `json:"disabled_models"`
-	}
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		http.Error(w, fmt.Sprintf("invalid request: %v", err), http.StatusBadRequest)
-		return
-	}
-
-	if h.uciTool == nil {
-		http.Error(w, "uci not available", http.StatusNotImplemented)
-		return
-	}
-
-	// 写入 settings section
-	oldPort := h.cfg.Load().Port()
-	if err := h.uciTool.SetOptionWithCommit("model-gateway", "settings", "port", fmt.Sprintf("%d", req.Port)); err != nil {
-		http.Error(w, fmt.Sprintf("set port failed: %v", err), http.StatusInternalServerError)
-		return
-	}
-	if req.AdminKey != "" && req.AdminKey != h.cfg.Load().AdminKey() {
-		if err := h.uciTool.SetOptionWithCommit("model-gateway", "settings", "admin_key", req.AdminKey); err != nil {
-			http.Error(w, fmt.Sprintf("set admin_key failed: %v", err), http.StatusInternalServerError)
-			return
-		}
-	}
-	if req.PollInterval > 0 {
-		if err := h.uciTool.SetOptionWithCommit("model-gateway", "settings", "poll_interval", fmt.Sprintf("%d", req.PollInterval)); err != nil {
-			http.Error(w, fmt.Sprintf("set poll_interval failed: %v", err), http.StatusInternalServerError)
-			return
-		}
-	}
-	if err := h.uciTool.SetOptionWithCommit("model-gateway", "settings", "headless", fmt.Sprintf("%d", map[bool]int{true: 1, false: 0}[req.Headless])); err != nil {
-		http.Error(w, fmt.Sprintf("set headless failed: %v", err), http.StatusInternalServerError)
-		return
-	}
-	if req.VisionRouter != "" {
-		if err := h.uciTool.SetOptionWithCommit("model-gateway", "settings", "vision_router", req.VisionRouter); err != nil {
-			http.Error(w, fmt.Sprintf("set vision_router failed: %v", err), http.StatusInternalServerError)
-			return
-		}
-	}
-
-	// 处理 disabled_models list
-	if err := h.uciTool.SetList("model-gateway", "settings", "disabled_models", req.DisabledModels); err != nil {
-		http.Error(w, fmt.Sprintf("set disabled_models failed: %v", err), http.StatusInternalServerError)
-		return
-	}
-
-	// 热重载配置
-	if h.reloadConfig != nil {
-		if newCfg, err := h.reloadConfig(); err == nil {
-			h.cfg.Store(newCfg)
-		}
-	}
-
-	// 端口变更后必须重启服务才能生效（Go 监听端口不可动态修改）
-	if req.Port > 0 && req.Port != oldPort {
-		go func() {
-			// 延迟 300ms，确保前端收到响应后再断连
-			time.Sleep(300 * time.Millisecond)
-			_ = exec.Command("/etc/init.d/model-gateway", "restart").Start()
-		}()
-	}
-
-	_ = json.NewEncoder(w).Encode(map[string]string{"status": "ok"})
 }
 
 // handleProviders 处理 /api/providers
@@ -381,14 +355,21 @@ func (h *AdminHandler) handleProvidersGet(w http.ResponseWriter, r *http.Request
 		}
 
 		providers = append(providers, map[string]interface{}{
-			"name":            p.Name,
-			"base_url":        p.BaseURL,
-			"api_key_masked":  maskKey(p.APIKey),
-			"models":          p.Models,
-			"disabled_models": p.DisabledModels,
-			"free_only":       p.FreeOnly,
-			"enabled":         p.Enabled,
-			"health":          health,
+			"name":              p.Name,
+			"base_url":          p.BaseURL,
+			"api_key_masked":    maskKey(p.APIKey),
+			"models":            p.Models,
+			"disabled_models":   p.DisabledModels,
+			"free_only":         p.FreeOnly,
+			"enabled":           p.Enabled,
+			"auth_header":       p.AuthHeader,
+			"auth_scheme":       p.AuthScheme,
+			"format":            p.FormatOrDefault(),
+			"thinking_budget":   p.ThinkingBudget,
+			"no_auth":           p.NoAuth,
+			"auth_optional":     p.AuthOptional,
+			"anonymous_api_key": maskKey(p.AnonymousAPIKey),
+			"health":            health,
 		})
 	}
 	_ = json.NewEncoder(w).Encode(providers)
@@ -397,11 +378,19 @@ func (h *AdminHandler) handleProvidersGet(w http.ResponseWriter, r *http.Request
 // handleProvidersPost 新增提供商（持久化到 UCI）
 func (h *AdminHandler) handleProvidersPost(w http.ResponseWriter, r *http.Request) {
 	var req struct {
-		Name    string   `json:"name"`
-		BaseURL string   `json:"base_url"`
-		APIKey  string   `json:"api_key"`
-		Models  []string `json:"models"`
-		Enabled bool     `json:"enabled"`
+		Name            string   `json:"name"`
+		BaseURL         string   `json:"base_url"`
+		APIKey          string   `json:"api_key"`
+		Models          []string `json:"models"`
+		Enabled         bool     `json:"enabled"`
+		AuthHeader      string   `json:"auth_header"`       // 可选：自定义鉴权头名（如 x-goog-api-key）
+		AuthScheme      string   `json:"auth_scheme"`       // 可选：鉴权前缀（Bearer/none/自定义；空=默认）
+		Format          string   `json:"format"`            // 可选：上游协议格式（openai/gemini/claude/openai-responses；空=openai）
+		ThinkingBudget  int      `json:"thinking_budget"`   // 可选：思考预算 token 上限（>0 注入 claude/gemini）
+		FreeOnly        bool     `json:"free_only"`         // 可选：仅自动勾选免费模型；默认 false（全选），仅 preset 流程显式传 true
+		NoAuth          bool     `json:"no_auth"`           // 可选：标记为免 Key 提供者
+		AuthOptional    bool     `json:"auth_optional"`     // 可选：标记为可选鉴权提供者（401 时自动去 auth 重试）
+		AnonymousAPIKey string   `json:"anonymous_api_key"` // 可选：免 Key 提供者的 documented anonymous key（如 AI Horde）
 	}
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		http.Error(w, fmt.Sprintf("invalid request: %v", err), http.StatusBadRequest)
@@ -420,6 +409,12 @@ func (h *AdminHandler) handleProvidersPost(w http.ResponseWriter, r *http.Reques
 		return
 	}
 
+	// P3-1: base_url 必须含 scheme（http:// 或 https://）
+	if !isValidURL(req.BaseURL) {
+		http.Error(w, "base_url must start with http:// or https://", http.StatusBadRequest)
+		return
+	}
+
 	// 原子地新增 provider section 并设置 option / models list
 	// 新增提供商默认启用（前端不传 enabled，且新提供商应立即可用，复刻 Python model-gateway 1.6.1 行为）
 	options := map[string]string{
@@ -428,15 +423,47 @@ func (h *AdminHandler) handleProvidersPost(w http.ResponseWriter, r *http.Reques
 		"api_key":  h.encryptKey(req.APIKey),
 		"enabled":  "1",
 	}
+	if strings.TrimSpace(req.AuthHeader) != "" {
+		options["auth_header"] = strings.TrimSpace(req.AuthHeader)
+	}
+	if strings.TrimSpace(req.AuthScheme) != "" {
+		options["auth_scheme"] = strings.TrimSpace(req.AuthScheme)
+	}
+	if f := strings.ToLower(strings.TrimSpace(req.Format)); f != "" && f != "openai" {
+		options["format"] = f
+	}
+	if req.ThinkingBudget > 0 {
+		options["thinking_budget"] = strconv.Itoa(req.ThinkingBudget)
+	}
+	if req.NoAuth {
+		options["no_auth"] = "1"
+	}
+	if req.AuthOptional {
+		options["auth_optional"] = "1"
+	}
+	if strings.TrimSpace(req.AnonymousAPIKey) != "" {
+		options["anonymous_api_key"] = strings.TrimSpace(req.AnonymousAPIKey)
+	}
+	// H1 修复：持久化 free_only，使其与 req.FreeOnly 一致。
+	// 否则 Load() 默认 FreeOnly:true（config/uci.go），重启后会把用户取消勾选的
+	// “自动选择免费模型”静默翻回勾选。
+	if req.FreeOnly {
+		options["free_only"] = "1"
+	} else {
+		options["free_only"] = "0"
+	}
 	lists := map[string][]string{}
 	if len(req.Models) > 0 {
 		lists["models"] = req.Models
-	} else if req.BaseURL != "" && req.APIKey != "" {
+	} else if req.BaseURL != "" && (req.APIKey != "" || strings.EqualFold(strings.TrimSpace(req.AuthScheme), "none")) {
 		// 复刻 Python 1.6.1 add_provider：添加提供商时自动拉取上游模型并全部选中（默认全选），
 		// 使输出模型 / 路由配置 / 识图 / 巡检扫描立即生效，无需手动到“模型管理”逐个勾选。
-		if fetched, ferr := fetchModelsFromUpstream(req.BaseURL, req.APIKey, true, h.meta.IsChatModel); ferr == nil && len(fetched) > 0 {
+		// 免 Key 提供者（auth_scheme=none）密钥为空也尝试自动拉取。
+		// F2 修复：freeOnly 不再硬编码 true（否则付费模型被漏选），默认 false 全选；
+		// 仅当调用方显式传 free_only=true（如 preset 流程）时才只选免费模型。
+		if fetched, ferr := FetchModelsFromUpstream(req.BaseURL, req.APIKey, req.AuthHeader, req.AuthScheme, req.FreeOnly, h.meta.IsChatModel); ferr == nil && len(fetched) > 0 {
 			lists["models"] = fetched
-			log.Printf("auto-selected %d models for new provider %q", len(fetched), req.Name)
+			log.Printf("auto-selected %d models for new provider %q (freeOnly=%v)", len(fetched), req.Name, req.FreeOnly)
 		}
 	}
 	if err := h.uciTool.AddSectionWithOptions("provider", options, lists); err != nil {
@@ -799,10 +826,19 @@ func (h *AdminHandler) handleAnnouncement(w http.ResponseWriter, r *http.Request
 		if err == nil && resp.StatusCode == http.StatusOK {
 			defer resp.Body.Close()
 			b, _ := io.ReadAll(resp.Body)
+			// P3-2: 限制远程公告最大长度（防磁盘耗尽）
+			const maxAnnouncementBytes = 1 << 20 // 1 MB
+			if len(b) > maxAnnouncementBytes {
+				b = b[:maxAnnouncementBytes]
+				log.Printf("[announcement] remote content truncated to %d bytes (max %d)", maxAnnouncementBytes, maxAnnouncementBytes)
+			}
 			content := strings.TrimSpace(string(b))
 			if content != "" {
+				// P2-6: 加锁保护 announcementCache 并发安全
+				h.announcementCache.mu.Lock()
 				h.announcementCache.content = content
 				h.announcementCache.ts = time.Now()
+				h.announcementCache.mu.Unlock()
 				// 持久化到本地缓存文件
 				if err := os.WriteFile(localPath, []byte(`{"content":`+jsonString(content)+`}`), 0644); err != nil {
 					log.Printf("write announcement cache failed: %v", err)
@@ -828,6 +864,36 @@ func (h *AdminHandler) handleAnnouncement(w http.ResponseWriter, r *http.Request
 func jsonString(s string) string {
 	b, _ := json.Marshal(s)
 	return string(b)
+}
+
+// P2-8 / P3-1: sanitizeSensitiveData 从字符串中移除 API key、token 等敏感信息，
+// 防止上游错误响应泄露凭证到前端。P3-1 扩展覆盖更多模式（虚拟密钥、JWT、
+// Authorization 头、长随机串、密码/secret/token 字段、内部堆栈行）。
+var (
+	sensitivePatterns = []*regexp.Regexp{
+		regexp.MustCompile(`(?i)sk-[a-zA-Z0-9_\-]{16,}`),                               // OpenAI 类 sk- 密钥
+		regexp.MustCompile(`(?i)sk-vk-[a-zA-Z0-9]{16,}`),                               // 虚拟子密钥
+		regexp.MustCompile(`(?i)eyJ[a-zA-Z0-9_\-]+\.[a-zA-Z0-9_\-]+\.[a-zA-Z0-9_\-]+`), // JWT（三段式 base64）
+		regexp.MustCompile(`(?i)bearer\s+[a-zA-Z0-9_\-\.]+`),                           // Bearer 令牌
+		regexp.MustCompile(`(?i)authorization\s*:\s*\S+`),                              // Authorization 头（含任意值）
+		regexp.MustCompile(`(?i)api[_-]?key\s*[:=]\s*[^\s"'}\]]+`),                     // api_key=xxx / api-key: xxx
+		regexp.MustCompile(`(?i)key\s*[:=]\s*[a-zA-Z0-9_\-]{16,}`),                     // key=xxx
+		regexp.MustCompile(`(?i)(password|secret|token)\s*[:=]\s*[^\s"'}\]]{6,}`),      // password/secret/token=xxx
+		regexp.MustCompile(`(?i)[a-z0-9]{40,}`),                                        // 长随机串（sha1/长 token 等）
+	}
+	sensitiveFieldRe = regexp.MustCompile(`(?i)"(api[_-]?key|password|secret|token|authorization)"\s*:\s*"[^"]*"`)
+	stackTraceRe     = regexp.MustCompile(`(?m)^(goroutine \d+|panic:|\s+[^\s]+\.go:\d+).*$`)
+)
+
+func sanitizeSensitiveData(s string) string {
+	for _, re := range sensitivePatterns {
+		s = re.ReplaceAllString(s, "[REDACTED]")
+	}
+	// JSON 中的敏感字段值
+	s = sensitiveFieldRe.ReplaceAllString(s, `"$1":"[REDACTED]"`)
+	// 内部堆栈/panic 行（避免泄露源码路径与行号）
+	s = stackTraceRe.ReplaceAllString(s, "[STACK]")
+	return s
 }
 
 // handleStability 处理 /api/stability?hours=24
@@ -870,18 +936,20 @@ func (h *AdminHandler) handleStability(w http.ResponseWriter, r *http.Request) {
 	}
 
 	type modelStat struct {
-		Provider     string  `json:"provider"`
-		Model        string  `json:"model"`
-		Checks       int     `json:"checks"`
-		Ok           int     `json:"ok"`
-		Fail         int     `json:"fail"`
-		Error        int     `json:"error"`
-		Availability float64 `json:"availability"`
-		AvgLatencyMs *int    `json:"avg_latency_ms"`
-		MinLatencyMs *int    `json:"min_latency_ms"`
-		MaxLatencyMs *int    `json:"max_latency_ms"`
-		LastStatus   string  `json:"last_status"`
-		Vision       bool    `json:"vision"`
+		Provider      string  `json:"provider"`
+		Model         string  `json:"model"`
+		Checks        int     `json:"checks"`
+		Ok            int     `json:"ok"`
+		Fail          int     `json:"fail"`
+		Error         int     `json:"error"`
+		Availability  float64 `json:"availability"`
+		AvgLatencyMs  *int    `json:"avg_latency_ms"`
+		MinLatencyMs  *int    `json:"min_latency_ms"`
+		MaxLatencyMs  *int    `json:"max_latency_ms"`
+		LastStatus    string  `json:"last_status"`
+		Vision        bool    `json:"vision"`
+		LastCheckAt   int64   `json:"last_check_at"`
+		lastCheckTime time.Time
 	}
 
 	stats := map[string]*modelStat{}
@@ -937,6 +1005,10 @@ func (h *AdminHandler) handleStability(w http.ResponseWriter, r *http.Request) {
 		st.LastStatus = "ok"
 		if !rec.OK {
 			st.LastStatus = "fail"
+		}
+		if rec.Time.After(st.lastCheckTime) {
+			st.lastCheckTime = rec.Time
+			st.LastCheckAt = rec.Time.Unix()
 		}
 	}
 
@@ -1007,8 +1079,10 @@ func (h *AdminHandler) handleVerifyKey(w http.ResponseWriter, r *http.Request) {
 	}
 
 	var req struct {
-		BaseURL string `json:"base_url"`
-		APIKey  string `json:"api_key"`
+		BaseURL    string `json:"base_url"`
+		APIKey     string `json:"api_key"`
+		AuthHeader string `json:"auth_header"`
+		AuthScheme string `json:"auth_scheme"`
 	}
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		http.Error(w, fmt.Sprintf("invalid request: %v", err), http.StatusBadRequest)
@@ -1018,7 +1092,9 @@ func (h *AdminHandler) handleVerifyKey(w http.ResponseWriter, r *http.Request) {
 	client := bypassClient
 	url := strings.TrimRight(req.BaseURL, "/") + "/models"
 	reqHttp, _ := http.NewRequestWithContext(r.Context(), http.MethodGet, url, nil)
-	reqHttp.Header.Set("Authorization", "Bearer "+req.APIKey)
+	if hn, hv := config.AuthHeaderValue(req.AuthHeader, req.AuthScheme, req.APIKey); hn != "" {
+		reqHttp.Header.Set(hn, hv)
+	}
 	resp, err := client.Do(reqHttp)
 	if err != nil {
 		_ = json.NewEncoder(w).Encode(map[string]interface{}{"ok": false, "detail": err.Error()})
@@ -1030,7 +1106,9 @@ func (h *AdminHandler) handleVerifyKey(w http.ResponseWriter, r *http.Request) {
 		_ = json.NewEncoder(w).Encode(map[string]interface{}{"ok": true, "detail": "连接成功"})
 	} else {
 		b, _ := io.ReadAll(resp.Body)
-		_ = json.NewEncoder(w).Encode(map[string]interface{}{"ok": false, "detail": fmt.Sprintf("HTTP %d: %s", resp.StatusCode, string(b)[:min(len(b), 200)])})
+		// P2-8: 净化响应体，防止上游错误信息泄露 API key 等敏感数据
+		sanitized := sanitizeSensitiveData(string(b))
+		_ = json.NewEncoder(w).Encode(map[string]interface{}{"ok": false, "detail": fmt.Sprintf("HTTP %d: %s", resp.StatusCode, sanitized[:min(len(sanitized), 200)])})
 	}
 }
 
@@ -1076,14 +1154,16 @@ func isFreeUpstreamModel(m upstreamModel) bool {
 	return true
 }
 
-// fetchModelsFromUpstream 从上游拉取模型列表。
+// FetchModelsFromUpstream 从上游拉取模型列表（公开，供 main.go 和 FreeModelGuard 使用）
 // freeOnly=true 时仅保留免费模型（名称含 :free/-free/_free，或上游 pricing 全为 0）；
 // isChat 非 nil 时仅保留对话模型（过滤 embed/asr/tts 等非对话模型，对齐 Python fetch_models）。
-func fetchModelsFromUpstream(baseURL, apiKey string, freeOnly bool, isChat func(string) bool) ([]string, error) {
+func FetchModelsFromUpstream(baseURL, apiKey, authHeader, authScheme string, freeOnly bool, isChat func(string) bool) ([]string, error) {
 	client := bypassClientLong
 	url := strings.TrimRight(baseURL, "/") + "/models"
 	req, _ := http.NewRequest(http.MethodGet, url, nil)
-	req.Header.Set("Authorization", "Bearer "+apiKey)
+	if hn, hv := config.AuthHeaderValue(authHeader, authScheme, apiKey); hn != "" {
+		req.Header.Set(hn, hv)
+	}
 	resp, err := client.Do(req)
 	if err != nil {
 		return nil, err
@@ -1112,6 +1192,124 @@ func fetchModelsFromUpstream(baseURL, apiKey string, freeOnly bool, isChat func(
 		models = append(models, m.ID)
 	}
 	return models, nil
+}
+
+// DetectFormat 探测上游协议格式（A2）：按响应结构推断 openai/gemini/claude/openai-responses。
+func DetectFormat(baseURL, apiKey, authHeader, authScheme string) string {
+	client := bypassClientLong
+	base := strings.TrimRight(baseURL, "/")
+
+	// 1) OpenAI 兼容：GET /models 返回 { "data": [...] }
+	if models, _ := FetchModelsFromUpstream(baseURL, apiKey, authHeader, authScheme, false, nil); len(models) > 0 {
+		return "openai"
+	}
+
+	// 2) Claude：POST /v1/messages 端点存在（返回 400 而非 404 说明命中原生协议）
+	msgURL := base + "/v1/messages"
+	payload, _ := json.Marshal(map[string]interface{}{
+		"model":      "detect",
+		"max_tokens": 1,
+		"messages":   []map[string]interface{}{{"role": "user", "content": "hi"}},
+	})
+	req, _ := http.NewRequest(http.MethodPost, msgURL, bytes.NewReader(payload))
+	if hn, hv := config.AuthHeaderValue(authHeader, authScheme, apiKey); hn != "" {
+		req.Header.Set(hn, hv)
+	}
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("anthropic-version", "2023-06-01")
+	if resp, err := client.Do(req); err == nil {
+		resp.Body.Close()
+		if resp.StatusCode == http.StatusBadRequest {
+			return "claude"
+		}
+	}
+
+	// 3) OpenAI Responses：POST /v1/responses 端点存在
+	respURL := base + "/v1/responses"
+	payload, _ = json.Marshal(map[string]interface{}{
+		"model":             "detect",
+		"max_output_tokens": 1,
+		"input":             []map[string]interface{}{{"role": "user", "content": "hi"}},
+	})
+	req, _ = http.NewRequest(http.MethodPost, respURL, bytes.NewReader(payload))
+	if hn, hv := config.AuthHeaderValue(authHeader, authScheme, apiKey); hn != "" {
+		req.Header.Set(hn, hv)
+	}
+	req.Header.Set("Content-Type", "application/json")
+	if resp, err := client.Do(req); err == nil {
+		resp.Body.Close()
+		if resp.StatusCode == http.StatusBadRequest {
+			return "openai-responses"
+		}
+	}
+
+	// 4) Gemini：GET /models 返回非 OpenAI 结构（含 models[].name 路径格式）
+	// 兜底回退 openai
+	return "openai"
+}
+
+// handleProviderProbe provider/probe 向导（A6）：前端传 base_url+key，先连测再返回模型清单+推断格式。
+func (h *AdminHandler) handleProviderProbe(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+	var req struct {
+		BaseURL    string `json:"base_url"`
+		APIKey     string `json:"api_key"`
+		AuthHeader string `json:"auth_header"`
+		AuthScheme string `json:"auth_scheme"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		http.Error(w, fmt.Sprintf("invalid request: %v", err), http.StatusBadRequest)
+		return
+	}
+	baseURL := strings.TrimSpace(req.BaseURL)
+	if baseURL == "" {
+		http.Error(w, "base_url is required", http.StatusBadRequest)
+		return
+	}
+
+	// 先探测连通性 + 推断格式
+	format := DetectFormat(baseURL, req.APIKey, req.AuthHeader, req.AuthScheme)
+	models, ferr := FetchModelsFromUpstream(baseURL, req.APIKey, req.AuthHeader, req.AuthScheme, false, nil)
+	if ferr != nil {
+		// 格式探测成功但模型拉取失败：仍返回推断格式，方便前端先填
+		_ = json.NewEncoder(w).Encode(map[string]interface{}{
+			"ok":     false,
+			"format": format,
+			"error":  ferr.Error(),
+			"models": []string{},
+		})
+		return
+	}
+
+	_ = json.NewEncoder(w).Encode(map[string]interface{}{
+		"ok":     true,
+		"format": format,
+		"models": models,
+	})
+}
+
+// handleProviderMarket 提供者市场：返回随包只读 providers_catalog.json（132 个 OpenAI 兼容提供者目录）。
+// 前端一次拉取后本地搜索；一键添加复用 POST /api/providers（无内置模型列表时后端自动拉取上游 /models 全选）。
+func (h *AdminHandler) handleProviderMarket(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+	w.Header().Set("Content-Type", "application/json")
+	paths := []string{
+		filepath.Join(h.appDir, "providers_catalog.json"),
+		filepath.Join(h.appDir, "..", "share", "model-gateway", "providers_catalog.json"),
+	}
+	for _, p := range paths {
+		if data, err := os.ReadFile(p); err == nil {
+			_, _ = w.Write(data)
+			return
+		}
+	}
+	_ = json.NewEncoder(w).Encode(map[string]interface{}{"version": 0, "providers": []interface{}{}})
 }
 
 // handlePresetInfo 获取预设配置清单
@@ -1289,6 +1487,10 @@ func (h *AdminHandler) handlePreset(w http.ResponseWriter, r *http.Request) {
 
 	for platName, platCfg := range presets.Platforms {
 		key := strings.TrimSpace(req.Keys[platName])
+		// P2-6: 若 key 是密文且 vault 已注入，先解密再验证/发送上游
+		if key != "" && h.vault != nil && strings.HasPrefix(key, storage.EncPrefix) {
+			key = h.vault.Decrypt(key)
+		}
 		if key == "" {
 			// 没填 Key：如果已有同名 provider，复用已有的 key 继续执行（重新拉模型）
 			// 确保预设新增的模型能生效，与原 Python 版行为一致
@@ -1330,7 +1532,7 @@ func (h *AdminHandler) handlePreset(w http.ResponseWriter, r *http.Request) {
 		}
 
 		// 拉模型（失败不阻断：与原 Python 版一致，provider 必须创建，模型列表退化为空或预设可见列表）
-		models, _ := fetchModelsFromUpstream(platCfg.BaseURL, key, platCfg.FreeOnly, h.meta.IsChatModel)
+		models, _ := FetchModelsFromUpstream(platCfg.BaseURL, key, "", "", platCfg.FreeOnly, h.meta.IsChatModel)
 
 		// 按预设 models_visible 收敛模型列表（与原 Python 版 apply_preset 一致）
 		if visible := platCfg.ModelsVisible; len(visible) > 0 {
@@ -1590,8 +1792,6 @@ func (h *AdminHandler) handleVisionAssist(w http.ResponseWriter, r *http.Request
 			http.Error(w, fmt.Sprintf("invalid request: %v", err), http.StatusBadRequest)
 			return
 		}
-		// 更新内存配置
-		h.cfg.Load().SetVisionAssist(req.Enabled)
 		// 持久化到 UCI
 		if h.uciTool != nil {
 			val := "0"
@@ -1599,6 +1799,12 @@ func (h *AdminHandler) handleVisionAssist(w http.ResponseWriter, r *http.Request
 				val = "1"
 			}
 			_ = h.uciTool.SetOptionWithCommit("model-gateway", "settings", "vision_assist", val)
+		}
+		// 通过 reloadConfig 生成新 Config 后 atomic.Store，避免直接改共享 Config 导致 data race。
+		if h.reloadConfig != nil {
+			if newCfg, err := h.reloadConfig(); err == nil {
+				h.cfg.Store(newCfg)
+			}
 		}
 		_ = json.NewEncoder(w).Encode(map[string]string{"status": "ok"})
 	default:
@@ -1726,10 +1932,17 @@ func (h *AdminHandler) handleProviderRoutes(w http.ResponseWriter, r *http.Reque
 // handleProviderUpdate 更新提供商配置
 func (h *AdminHandler) handleProviderUpdate(w http.ResponseWriter, r *http.Request, name string) {
 	var req struct {
-		BaseURL *string  `json:"base_url"`
-		APIKey  *string  `json:"api_key"`
-		Models  []string `json:"models"`
-		Enabled *bool    `json:"enabled"`
+		BaseURL         *string  `json:"base_url"`
+		APIKey          *string  `json:"api_key"`
+		Models          []string `json:"models"`
+		Enabled         *bool    `json:"enabled"`
+		AuthHeader      *string  `json:"auth_header"`
+		AuthScheme      *string  `json:"auth_scheme"`
+		Format          *string  `json:"format"`
+		ThinkingBudget  *int     `json:"thinking_budget"`
+		NoAuth          *bool    `json:"no_auth"`
+		AuthOptional    *bool    `json:"auth_optional"`
+		AnonymousAPIKey *string  `json:"anonymous_api_key"`
 	}
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		http.Error(w, fmt.Sprintf("invalid request: %v", err), http.StatusBadRequest)
@@ -1767,6 +1980,10 @@ func (h *AdminHandler) handleProviderUpdate(w http.ResponseWriter, r *http.Reque
 	// 仅更新请求体中实际提供的字段，避免保存模型选择时把 base_url / api_key / enabled 误清空（回归修复）
 	options := map[string]string{}
 	if req.BaseURL != nil {
+		if !isValidURL(*req.BaseURL) {
+			http.Error(w, "base_url must start with http:// or https://", http.StatusBadRequest)
+			return
+		}
 		options["base_url"] = *req.BaseURL
 	}
 	if req.APIKey != nil {
@@ -1774,6 +1991,31 @@ func (h *AdminHandler) handleProviderUpdate(w http.ResponseWriter, r *http.Reque
 	}
 	if req.Enabled != nil {
 		options["enabled"] = map[bool]string{true: "1", false: "0"}[*req.Enabled]
+	}
+	if req.AuthHeader != nil {
+		options["auth_header"] = strings.TrimSpace(*req.AuthHeader)
+	}
+	if req.AuthScheme != nil {
+		options["auth_scheme"] = strings.TrimSpace(*req.AuthScheme)
+	}
+	if req.Format != nil {
+		f := strings.ToLower(strings.TrimSpace(*req.Format))
+		if f == "" {
+			f = "openai"
+		}
+		options["format"] = f
+	}
+	if req.ThinkingBudget != nil && *req.ThinkingBudget > 0 {
+		options["thinking_budget"] = strconv.Itoa(*req.ThinkingBudget)
+	}
+	if req.NoAuth != nil {
+		options["no_auth"] = map[bool]string{true: "1", false: "0"}[*req.NoAuth]
+	}
+	if req.AuthOptional != nil {
+		options["auth_optional"] = map[bool]string{true: "1", false: "0"}[*req.AuthOptional]
+	}
+	if req.AnonymousAPIKey != nil {
+		options["anonymous_api_key"] = strings.TrimSpace(*req.AnonymousAPIKey)
 	}
 	if len(options) > 0 {
 		if err := h.uciTool.BatchSetOptions("provider", sectionName, options); err != nil {
@@ -1923,7 +2165,7 @@ func (h *AdminHandler) handleFetchModels(w http.ResponseWriter, r *http.Request,
 	client := bypassClientLong
 	url := strings.TrimRight(targetProvider.BaseURL, "/") + "/models"
 	reqHttp, _ := http.NewRequestWithContext(r.Context(), http.MethodGet, url, nil)
-	reqHttp.Header.Set("Authorization", "Bearer "+targetProvider.APIKey)
+	targetProvider.ApplyAuth(reqHttp.Header)
 	resp, err := client.Do(reqHttp)
 	if err != nil {
 		http.Error(w, fmt.Sprintf("fetch models failed: %v", err), http.StatusInternalServerError)
@@ -1995,7 +2237,7 @@ func (h *AdminHandler) handleAvailableModels(w http.ResponseWriter, r *http.Requ
 	client := bypassClientLong
 	url := strings.TrimRight(targetProvider.BaseURL, "/") + "/models"
 	reqHttp, _ := http.NewRequestWithContext(r.Context(), http.MethodGet, url, nil)
-	reqHttp.Header.Set("Authorization", "Bearer "+targetProvider.APIKey)
+	targetProvider.ApplyAuth(reqHttp.Header)
 	resp, err := client.Do(reqHttp)
 	if err != nil {
 		http.Error(w, fmt.Sprintf("fetch models failed: %v", err), http.StatusInternalServerError)
@@ -2016,14 +2258,22 @@ func (h *AdminHandler) handleAvailableModels(w http.ResponseWriter, r *http.Requ
 		return
 	}
 
-	// 提取模型 ID 字符串列表（与原 Python 版一致，返回 ["model-id-1", "model-id-2", ...]）
-	modelIDs := make([]string, 0, len(result.Data))
-	for _, m := range result.Data {
-		if id, ok := m["id"].(string); ok {
-			modelIDs = append(modelIDs, id)
-		}
+	// 提取模型信息列表（含是否免费标记，供前端模型管理面板自动勾选免费模型）
+	type upstreamModel struct {
+		ID      string                 `json:"id"`
+		Pricing map[string]interface{} `json:"pricing"`
 	}
-	_ = json.NewEncoder(w).Encode(map[string]interface{}{"ok": true, "models": modelIDs})
+	modelInfos := make([]map[string]interface{}, 0, len(result.Data))
+	for _, m := range result.Data {
+		info := map[string]interface{}{
+			"id": m["id"],
+		}
+		if p, ok := m["pricing"].(map[string]interface{}); ok {
+			info["pricing"] = p
+		}
+		modelInfos = append(modelInfos, info)
+	}
+	_ = json.NewEncoder(w).Encode(map[string]interface{}{"ok": true, "models": modelInfos})
 }
 
 // handleCheck 处理手动检测 /api/check/{name}/{model} 或 /api/check/all
@@ -2056,13 +2306,18 @@ func (h *AdminHandler) handleCheck(w http.ResponseWriter, r *http.Request) {
 					// 逐模型真实探测：POST {BaseURL}/chat/completions（对齐 Python check_model 与 poll.go），
 					// 解析别名后发送最小请求（max_tokens=5, stream=false），30s 超时由 ChatProbe 内部管控。
 					actual := h.meta.ResolveModel(model)
-					ok, detail, latency, _ := engine.ChatProbe(p.BaseURL, p.APIKey, actual, client)
+					ok, detail, latency, _ := engine.ChatProbe(p, actual, client)
 					modelKey := p.Name + "||" + model
 					rec := storage.PollRecord{Time: time.Now(), Model: modelKey, Latency: latency.Milliseconds(), OK: ok, Error: detail}
 					item := map[string]interface{}{
 						"latency_ms": latency.Milliseconds(),
-						"status":      map[bool]string{true: "ok", false: "fail"}[ok],
+						"status":     map[bool]string{true: "ok", false: "fail"}[ok],
 						"detail":     detail,
+					}
+					// C4 模型锁定自愈：暴露锁定状态（连续失败被关小黑屋）
+					if h.circuits != nil {
+						item["locked"] = h.circuits.Locked(modelKey)
+						item["circuit_state"] = h.circuits.State(modelKey)
 					}
 					mu.Lock()
 					results[modelKey] = item
@@ -2106,7 +2361,7 @@ func (h *AdminHandler) handleCheck(w http.ResponseWriter, r *http.Request) {
 	client := bypassClientLong
 	// 逐模型真实探测：POST {BaseURL}/chat/completions（对齐 Python check_model 与 /api/check/all）
 	actual := h.meta.ResolveModel(model)
-	ok, detail, latency, _ := engine.ChatProbe(targetProvider.BaseURL, targetProvider.APIKey, actual, client)
+	ok, detail, latency, _ := engine.ChatProbe(targetProvider, actual, client)
 	result := map[string]interface{}{
 		"name":       name,
 		"model":      model,
@@ -2131,6 +2386,19 @@ func min(a, b int) int {
 	return b
 }
 
+// isValidURL 校验 URL 是否含 http/https scheme（P3-1: base_url 持久化前校验）
+func isValidURL(raw string) bool {
+	if raw == "" {
+		return false
+	}
+	u, err := url.Parse(raw)
+	if err != nil {
+		return false
+	}
+	scheme := strings.ToLower(u.Scheme)
+	return scheme == "http" || scheme == "https"
+}
+
 // maskKey 脱敏 API Key
 func maskKey(key string) string {
 	if len(key) <= 12 {
@@ -2141,7 +2409,7 @@ func maskKey(key string) string {
 
 // appVersion 当前构建版本号（与 iStoreOS meta / 面板标题一致，纯 semver 部分）。
 // 打包时由 mkipk.py 的 VERSION 与面板三处同步；此处仅取 semver 用于更新比对。
-const appVersion = "1.5.3"
+const appVersion = "1.9.0"
 
 // handleCheckUpdate 对接 GitHub Releases 检查新版本（问题6）。
 // 拉取 https://api.github.com/repos/wanvfx/luci-app-model-gateway/releases/latest，
@@ -2165,6 +2433,7 @@ func (h *AdminHandler) handleCheckUpdate(w http.ResponseWriter, r *http.Request)
 		"release_notes": notes,
 		"download_url":  downloadURL,
 		"force_update":  false,
+		"self_update":   false, // 本设备（OpenWrt/iStoreOS 软路由）不支持一键在线更新，需经 iStore/opkg 升级
 		"error":         errToStr(fetchErr),
 	})
 }
@@ -2260,29 +2529,38 @@ func (h *AdminHandler) handleOpenURL(w http.ResponseWriter, r *http.Request) {
 	_ = json.NewEncoder(w).Encode(map[string]string{"status": "ok"})
 }
 
-// handleStartDownload 处理 /api/start-download（存根）
+// handleStartDownload 处理 /api/start-download（本设备不支持在线更新）
 func (h *AdminHandler) handleStartDownload(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
 		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
 		return
 	}
-	_ = json.NewEncoder(w).Encode(map[string]string{"status": "ok", "error": "not supported on OpenWrt"})
+	_ = json.NewEncoder(w).Encode(map[string]interface{}{
+		"ok":    false,
+		"error": "本设备（OpenWrt/iStoreOS）不支持一键在线更新，请通过 iStore 应用商店或 opkg 升级到最新版本",
+	})
 }
 
-// handleDownloadProgress 处理 /api/download-progress（存根）
+// handleDownloadProgress 处理 /api/download-progress（本设备不支持在线更新）
 func (h *AdminHandler) handleDownloadProgress(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodGet {
 		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
 		return
 	}
-	_ = json.NewEncoder(w).Encode(map[string]interface{}{"ok": false, "error": "not supported"})
+	_ = json.NewEncoder(w).Encode(map[string]interface{}{
+		"ok":    false,
+		"error": "本设备（OpenWrt/iStoreOS）不支持一键在线更新",
+	})
 }
 
-// handleApplyUpdate 处理 /api/apply-update（存根）
+// handleApplyUpdate 处理 /api/apply-update（本设备不支持在线更新）
 func (h *AdminHandler) handleApplyUpdate(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
 		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
 		return
 	}
-	_ = json.NewEncoder(w).Encode(map[string]string{"status": "ok", "error": "not supported on OpenWrt"})
+	_ = json.NewEncoder(w).Encode(map[string]interface{}{
+		"ok":    false,
+		"error": "本设备（OpenWrt/iStoreOS）不支持一键在线更新，请通过 iStore 应用商店或 opkg 升级到最新版本",
+	})
 }

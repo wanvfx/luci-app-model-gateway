@@ -2,6 +2,7 @@ package engine
 
 import (
 	"encoding/json"
+	"log"
 	"os"
 	"path/filepath"
 	"strings"
@@ -54,10 +55,15 @@ func LoadCatalog(appDir, dataDir string) *Catalog {
 
 // loadLayers 按优先级依次合并各层数据（后加载的覆盖先加载的）
 func (c *Catalog) loadLayers(appDir, dataDir string) {
-	paths := []string{
+	paths := []string{}
+	// S5：环境变量资源目录优先（MODEL_GATEWAY_APP），覆盖开发/安装布局差异
+	if env := os.Getenv("MODEL_GATEWAY_APP"); env != "" {
+		paths = append(paths, filepath.Join(env, "models_catalog.json"))
+	}
+	paths = append(paths,
 		filepath.Join(appDir, "models_catalog.json"),
 		filepath.Join(appDir, "..", "share", "model-gateway", "models_catalog.json"),
-	}
+	)
 	if dataDir != "" {
 		paths = append(paths,
 			filepath.Join(dataDir, "models_catalog_sync.json"),
@@ -69,6 +75,7 @@ func (c *Catalog) loadLayers(appDir, dataDir string) {
 			c.merge(data)
 		}
 	}
+	log.Printf("[catalog] Loaded %d entries from %d paths (appDir=%s dataDir=%s)", len(c.models), len(paths), appDir, dataDir)
 }
 
 // Reload 原子重载全部分层数据（价格自动同步落盘后调用）。

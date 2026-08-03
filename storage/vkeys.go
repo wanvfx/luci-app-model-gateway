@@ -6,6 +6,7 @@ package storage
 
 import (
 	"crypto/rand"
+	"crypto/subtle"
 	"encoding/hex"
 	"encoding/json"
 	"log"
@@ -21,7 +22,7 @@ const vkeyFile = "vkeys.json"
 // VKey 虚拟密钥
 type VKey struct {
 	ID            string   `json:"id"`
-	Key           string   `json:"key"`            // sk-vk-... 明文（仅创建时返回一次，列表接口已脱敏）
+	Key           string   `json:"key"` // sk-vk-... 明文（仅创建时返回一次，列表接口已脱敏）
 	Name          string   `json:"name"`
 	Enabled       bool     `json:"enabled"`
 	QuotaRequests int      `json:"quota_requests"` // 每日请求上限（0=不限）
@@ -39,7 +40,7 @@ type vkeyUsage struct {
 }
 
 type vkeyStoreFile struct {
-	Keys  []*VKey             `json:"keys"`
+	Keys  []*VKey               `json:"keys"`
 	Usage map[string]*vkeyUsage `json:"usage"` // id -> 当日用量
 }
 
@@ -84,11 +85,15 @@ func (s *VKeyStore) save() error {
 	if s.dir == "" {
 		return nil
 	}
-	if err := os.MkdirAll(s.dir, 0755); err != nil {
+	// P2-4：锁内序列化、锁外写盘，避免持锁执行 I/O 阻塞并发读。
+	// 调用方需先释放 s.mu 再调用本函数（sync.Mutex 不可重入，否则死锁）。
+	s.mu.Lock()
+	b, err := json.MarshalIndent(s.data, "", "  ")
+	s.mu.Unlock()
+	if err != nil {
 		return err
 	}
-	b, err := json.MarshalIndent(s.data, "", "  ")
-	if err != nil {
+	if err := os.MkdirAll(s.dir, 0755); err != nil {
 		return err
 	}
 	tmp := s.path() + ".tmp"
@@ -107,7 +112,6 @@ func genVKey() string {
 // Add 新增虚拟密钥（生成 id + key），返回创建的密钥（含明文 key）
 func (s *VKeyStore) Add(name string, quotaReq, quotaTok int, allowed []string, notes string) (*VKey, error) {
 	s.mu.Lock()
-	defer s.mu.Unlock()
 	vk := &VKey{
 		ID:            genVKey(),
 		Key:           genVKey(),
@@ -120,6 +124,7 @@ func (s *VKeyStore) Add(name string, quotaReq, quotaTok int, allowed []string, n
 		CreatedAt:     time.Now().Format(time.RFC3339),
 	}
 	s.data.Keys = append(s.data.Keys, vk)
+	s.mu.Unlock()
 	if err := s.save(); err != nil {
 		return nil, err
 	}
@@ -134,8 +139,8 @@ func (s *VKeyStore) List() []*VKey {
 	out := make([]*VKey, 0, len(s.data.Keys))
 	for _, vk := range s.data.Keys {
 		c := *vk
-		if len(c.Key) > 10 {
-			c.Key = c.Key[:7] + "****" + c.Key[len(c.Key)-4:]
+		if len(c.Key) > 8 {
+			c.Key = c.Key[:4] + "****" + c.Key[len(c.Key)-4:]
 		} else {
 			c.Key = "****"
 		}
@@ -144,13 +149,14 @@ func (s *VKeyStore) List() []*VKey {
 	return out
 }
 
-// Get 按 id 获取（Key 明文，仅内部/管理使用）
+// Get 按 id 获取（Key 明文，仅内部/管理使用）。返回深拷贝，避免调用方在锁外使用时与 Update 并发修改 race。
 func (s *VKeyStore) Get(id string) *VKey {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	for _, vk := range s.data.Keys {
 		if vk.ID == id {
-			return vk
+			c := *vk
+			return &c
 		}
 	}
 	return nil
@@ -159,7 +165,6 @@ func (s *VKeyStore) Get(id string) *VKey {
 // Delete 按 id 删除
 func (s *VKeyStore) Delete(id string) error {
 	s.mu.Lock()
-	defer s.mu.Unlock()
 	kept := s.data.Keys[:0]
 	found := false
 	for _, vk := range s.data.Keys {
@@ -170,10 +175,12 @@ func (s *VKeyStore) Delete(id string) error {
 		kept = append(kept, vk)
 	}
 	if !found {
+		s.mu.Unlock()
 		return os.ErrNotExist
 	}
 	s.data.Keys = kept
 	delete(s.data.Usage, id)
+	s.mu.Unlock()
 	return s.save()
 }
 
@@ -181,22 +188,30 @@ func (s *VKeyStore) Delete(id string) error {
 // 明文 Key 不可改（改了等于换新密钥，应当由调用方走「删除+新建」）。
 func (s *VKeyStore) Update(id string, name string, enabled bool, quotaReq, quotaTok int, allowed []string, notes string) error {
 	s.mu.Lock()
-	defer s.mu.Unlock()
+	var target *VKey
 	for _, vk := range s.data.Keys {
 		if vk.ID == id {
-			vk.Name = strings.TrimSpace(name)
-			vk.Enabled = enabled
-			vk.QuotaRequests = quotaReq
-			vk.QuotaTokens = quotaTok
-			vk.AllowedModels = allowed
-			vk.Notes = notes
-			return s.save()
+			target = vk
+			break
 		}
 	}
-	return os.ErrNotExist
+	if target == nil {
+		s.mu.Unlock()
+		return os.ErrNotExist
+	}
+	target.Name = strings.TrimSpace(name)
+	target.Enabled = enabled
+	target.QuotaRequests = quotaReq
+	target.QuotaTokens = quotaTok
+	target.AllowedModels = allowed
+	target.Notes = notes
+	s.mu.Unlock()
+	return s.save()
 }
 
-// Validate 校验 Bearer token，返回匹配的已启用密钥（否则 nil）
+// Validate 校验 Bearer token，返回匹配的已启用密钥（否则 nil）。
+// 返回深拷贝（含 AllowedModels slice），避免调用方在锁外使用时与 Update() 并发修改 race。
+// 使用 subtle.ConstantTimeCompare 防止时序侧信道攻击。
 func (s *VKeyStore) Validate(token string) *VKey {
 	if token == "" {
 		return nil
@@ -204,18 +219,23 @@ func (s *VKeyStore) Validate(token string) *VKey {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	for _, vk := range s.data.Keys {
-		if vk.Enabled && vk.Key == token {
-			return vk
+		if vk.Enabled && subtle.ConstantTimeCompare([]byte(vk.Key), []byte(token)) == 1 {
+			c := *vk
+			return &c
 		}
 	}
 	return nil
 }
 
-// QuotaExceeded 判断密钥当日配额是否已耗尽
+// QuotaExceeded 判断密钥当日配额是否已耗尽。
+// vk 为 Validate 返回的深拷贝，读取 vk.QuotaRequests/QuotaTokens 无 race；
+// 但 todayUsage 读 s.data.Usage map 需加锁。
 func (s *VKeyStore) QuotaExceeded(vk *VKey) bool {
 	if vk.QuotaRequests <= 0 && vk.QuotaTokens <= 0 {
 		return false
 	}
+	s.mu.Lock()
+	defer s.mu.Unlock()
 	u := s.todayUsage(vk.ID)
 	if vk.QuotaRequests > 0 && u.Requests >= vk.QuotaRequests {
 		return true
@@ -243,20 +263,23 @@ func (s *VKeyStore) Allowed(vk *VKey, model string) bool {
 // RecordUsage 累加当日用量（请求数 + Token 数）
 func (s *VKeyStore) RecordUsage(id string, reqs, toks int) {
 	s.mu.Lock()
-	defer s.mu.Unlock()
 	u := s.todayUsage(id)
 	u.Requests += reqs
 	u.Tokens += toks
 	s.data.Usage[id] = u
+	s.mu.Unlock()
 	_ = s.save()
 }
 
-// UsageOf 返回密钥当日用量快照
+// UsageOf 返回密钥当日用量快照。加锁防止与 RecordUsage 并发读写 map。
 func (s *VKeyStore) UsageOf(id string) (requests, tokens int) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
 	u := s.todayUsage(id)
 	return u.Requests, u.Tokens
 }
 
+// todayUsage 返回密钥当日用量指针。调用方必须持有 s.mu 锁。
 func (s *VKeyStore) todayUsage(id string) *vkeyUsage {
 	today := time.Now().Format("2006-01-02")
 	u, ok := s.data.Usage[id]

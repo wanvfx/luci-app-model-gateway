@@ -60,20 +60,26 @@ func (u *Usage) Append(r UsageRecord) error {
 			return err
 		}
 	}
-	if err := u.encoder.Encode(r); err != nil {
+	// P1-3: 序列化与写盘都在锁内执行。
+	// 早期「锁外写盘」（P2-4）与 Cleanup/rotate 在锁内替换 u.file 句柄形成 data race——
+	// 并发时 Append 可能向已被 close/unlink 的旧 fd 写入导致记录丢失。
+	// 此处将写盘收回锁内：O_APPEND 单次 Write 原子的前提不变，且保证与句柄替换串行。
+	b, err := json.Marshal(r)
+	if err != nil {
 		return err
 	}
-	// 按实际序列化长度累计（+1 为 Encode 附加的换行符），避免粗估导致轮转滞后
-	if b, err := json.Marshal(r); err == nil {
-		u.size += int64(len(b)) + 1
-	} else {
-		u.size += 128
+	line := append(b, '\n')
+	u.size += int64(len(line))
+	if _, werr := u.file.Write(line); werr != nil {
+		return werr
 	}
 	return nil
 }
 
 // Read 读取最近 days 天内的用量记录
 func (u *Usage) Read(days int) ([]UsageRecord, error) {
+	u.mu.Lock()
+	defer u.mu.Unlock()
 	path := u.dir + "/usage.jsonl"
 	f, err := os.Open(path)
 	if err != nil {
@@ -101,6 +107,8 @@ func (u *Usage) Read(days int) ([]UsageRecord, error) {
 
 // Cleanup 清理超过 maxAge 的过期记录
 func (u *Usage) Cleanup(maxAge time.Duration) (int, error) {
+	u.mu.Lock()
+	defer u.mu.Unlock()
 	path := u.dir + "/usage.jsonl"
 	f, err := os.Open(path)
 	if err != nil {
@@ -134,6 +142,17 @@ func (u *Usage) Cleanup(maxAge time.Duration) (int, error) {
 		}
 		if err := os.Rename(tmp, path); err != nil {
 			return 0, err
+		}
+		// 重写后旧 inode 已与目录项脱钩，需把追加句柄重定向到新文件，
+		// 否则后续 Append 仍写入被 unlink 的旧文件导致数据丢失（且 size 计数错位）。
+		if u.file != nil {
+			u.file.Close()
+		}
+		nf, oerr := os.OpenFile(path, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
+		if oerr == nil {
+			u.file = nf
+			u.encoder = json.NewEncoder(nf)
+			u.size = 0
 		}
 	}
 	return removed, nil

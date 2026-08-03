@@ -11,6 +11,7 @@ import (
 	"crypto/rand"
 	"encoding/base64"
 	"errors"
+	"log"
 	"os"
 	"path/filepath"
 	"strings"
@@ -44,6 +45,7 @@ func (v *Vault) masterKey() ([]byte, error) {
 		return nil, errors.New("vault master key unavailable")
 	}
 	if v.dir == "" {
+		log.Printf("vault: dir empty, key vault disabled (P3-4)")
 		v.fail = true
 		return nil, errors.New("vault dir empty")
 	}
@@ -55,20 +57,24 @@ func (v *Vault) masterKey() ([]byte, error) {
 			return v.key, nil
 		}
 		// 文件损坏：不覆盖（避免已有密文永久不可解），降级明文
+		log.Printf("vault: vault.key corrupted, falling back to plaintext (P3-4)")
 		v.fail = true
 		return nil, errors.New("vault.key corrupted")
 	}
 	// 首次生成
 	raw := make([]byte, 32)
 	if _, err := rand.Read(raw); err != nil {
+		log.Printf("vault: crypto/rand failed, vault disabled (P3-4): %v", err)
 		v.fail = true
 		return nil, err
 	}
 	if err := os.MkdirAll(v.dir, 0755); err != nil {
+		log.Printf("vault: mkdir failed, vault disabled (P3-4): %v", err)
 		v.fail = true
 		return nil, err
 	}
 	if err := os.WriteFile(path, []byte(base64.StdEncoding.EncodeToString(raw)), 0600); err != nil {
+		log.Printf("vault: write vault.key failed, vault disabled (P3-4): %v", err)
 		v.fail = true
 		return nil, err
 	}

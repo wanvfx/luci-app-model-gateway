@@ -12,6 +12,7 @@ import (
 	"github.com/wanvfx/luci-app-model-gateway/calllog"
 	"github.com/wanvfx/luci-app-model-gateway/config"
 	"github.com/wanvfx/luci-app-model-gateway/engine"
+	"github.com/wanvfx/luci-app-model-gateway/proxy/translator"
 	"github.com/wanvfx/luci-app-model-gateway/storage"
 )
 
@@ -39,29 +40,132 @@ func (s *Server) streamFromUpstream(w http.ResponseWriter, r *http.Request, req 
 	// 安全修复：只替换 JSON 的 "model" 字段，不再对整个 body 做子串替换，
 	// 避免用户 prompt 内容恰好包含模型名时被误改（污染对话内容）。
 	resolvedModel := s.meta.ResolveModel(candidate.Model)
-	reqBody := string(replaceModelInBody(body, req.Model, resolvedModel))
+	isGemini := strings.EqualFold(provider.FormatOrDefault(), translator.FormatGemini)
+	isClaude := strings.EqualFold(provider.FormatOrDefault(), translator.FormatClaude)
+	isResponses := strings.EqualFold(provider.FormatOrDefault(), translator.FormatResponses)
+	// 通用协议适配器（Phase C）：format 命中声明式规格时，按规格构造上游请求。
+	adapterSpec := translator.LookupAdapter(provider.FormatOrDefault())
+	adapterToken := ""
+	if adapterSpec != nil {
+		tk, terr := adapterSpec.EnsureToken(provider.BaseURL, s.httpClient)
+		if terr != nil {
+			return streamResult{upstreamErr: fmt.Errorf("adapter %s preflight: %w", adapterSpec.ID, terr)}
+		}
+		adapterToken = tk
+	}
 
-	// 注入 stream_options: {"include_usage": true}（确保上游在流中返回 usage）
-	reqBody = injectStreamOptions(reqBody)
+	// 计算上游 URL 与请求体：Gemini/Claude 走各自原生协议，openai 直连。
+	var upstreamURL string
+	var upstreamBodyStr string
+	if adapterSpec != nil {
+		ab, _, _, aerr := adapterSpec.BuildRequestBody([]byte(replaceModelInBody(body, req.Model, resolvedModel)), adapterToken)
+		if aerr != nil {
+			return streamResult{upstreamErr: aerr}
+		}
+		upstreamBodyStr = string(ab)
+		upstreamURL = adapterSpec.ChatURL(provider.BaseURL, adapterToken)
+	} else if isGemini {
+		gb, model, _, gerr := translator.ToGeminiBody([]byte(replaceModelInBody(body, req.Model, resolvedModel)))
+		if gerr != nil {
+			return streamResult{upstreamErr: gerr}
+		}
+		upstreamBodyStr = string(gb)
+		upstreamURL = strings.TrimRight(provider.BaseURL, "/") + "/models/" + model + ":streamGenerateContent?alt=sse"
+	} else if isClaude {
+		cb, _, cerr := translator.ToClaudeBody([]byte(replaceModelInBody(body, req.Model, resolvedModel)))
+		if cerr != nil {
+			return streamResult{upstreamErr: cerr}
+		}
+		upstreamBodyStr = string(cb)
+		upstreamURL = strings.TrimRight(provider.BaseURL, "/") + "/v1/messages"
+	} else if isResponses {
+		rb, _, rerr := translator.ToResponsesBody([]byte(replaceModelInBody(body, req.Model, resolvedModel)))
+		if rerr != nil {
+			return streamResult{upstreamErr: rerr}
+		}
+		upstreamBodyStr = string(rb)
+		upstreamURL = strings.TrimRight(provider.BaseURL, "/") + "/v1/responses"
+	} else {
+		reqBody := string(replaceModelInBody(body, req.Model, resolvedModel))
+		// 注入 stream_options: {"include_usage": true}（确保上游在流中返回 usage）
+		reqBody = injectStreamOptions(reqBody)
+		upstreamBodyStr = reqBody
+		upstreamURL = provider.BaseURL + "/chat/completions"
+	}
+
+	// G5 思考预算：对支持推理的模型注入 thinking 参数（claude / gemini）。openai 推理模型走原生参数，此处不注入。
+	if provider.ThinkingBudget > 0 {
+		if isClaude {
+			upstreamBodyStr = injectClaudeThinking(upstreamBodyStr, provider.ThinkingBudget)
+		} else if isGemini {
+			upstreamBodyStr = injectGeminiThinking(upstreamBodyStr, provider.ThinkingBudget)
+		}
+	}
+	// Provider 专属请求体转换（OpenCode strip client_metadata / Pollinations jsonMode）。
+	upstreamBodyStr = string(transformRequestBody(provider, []byte(upstreamBodyStr)))
 
 	// 创建上游请求
-	upstreamReq, err := http.NewRequestWithContext(r.Context(), http.MethodPost, provider.BaseURL+"/chat/completions", strings.NewReader(reqBody))
+	upstreamMethod := http.MethodPost
+	if adapterSpec != nil {
+		upstreamMethod = adapterSpec.HTTPMethod()
+	}
+	upstreamReq, err := http.NewRequestWithContext(r.Context(), upstreamMethod, upstreamURL, strings.NewReader(upstreamBodyStr))
 	if err != nil {
 		return streamResult{upstreamErr: err}
 	}
 	upstreamReq.Header.Set("Content-Type", "application/json")
-	upstreamReq.Header.Set("Authorization", "Bearer "+provider.APIKey)
-	upstreamReq.Header.Set("Accept", "text/event-stream")
+	provider.ApplyAuth(upstreamReq.Header)
+	injectProviderSpecificHeaders(provider, upstreamReq.Header, r)
+	if isClaude {
+		// Anthropic 必需头（与鉴权头无关，固定值）
+		upstreamReq.Header.Set("anthropic-version", "2023-06-01")
+	}
+	if adapterSpec != nil {
+		if adapterSpec.SupportsStream() {
+			upstreamReq.Header.Set("Accept", "text/event-stream")
+		} else {
+			// 上游不支持流式：按普通 JSON 请求，稍后由引擎把整包包成单块 SSE。
+			upstreamReq.Header.Set("Accept", "application/json, text/plain, */*")
+		}
+		// 适配器声明的固定头（含 ${token} 渲染）最后写入，优先级最高。
+		adapterSpec.ApplyHeaders(upstreamReq.Header, adapterToken)
+	} else {
+		upstreamReq.Header.Set("Accept", "text/event-stream")
+	}
 
-	// 发送请求
-	resp, err := s.httpClient.Do(upstreamReq)
+	// 发送请求（流式专用客户端：无整体超时，避免长 SSE 被 30s 截断；取消由 r.Context() 控制，S9）
+	resp, err := s.httpClientStream.Do(upstreamReq)
 	if err != nil {
 		return streamResult{upstreamErr: fmt.Errorf("upstream request failed: %w", err)}
 	}
+
+	// 可选鉴权重试：提供者标记为 AuthOptional（如 Pollinations 免费层）且上游返回 401 时，
+	// 自动去掉 Authorization 头重试一次（仅 openai 直连路径，adapter 已有自己的令牌刷新）。
+	if resp.StatusCode == http.StatusUnauthorized && provider.AuthOptional && provider.APIKey != "" && adapterSpec == nil {
+		resp.Body.Close()
+		upstreamReq2, err2 := http.NewRequestWithContext(r.Context(), upstreamMethod, upstreamURL, strings.NewReader(upstreamBodyStr))
+		if err2 != nil {
+			return streamResult{upstreamErr: fmt.Errorf("upstream retry request build failed: %w", err2)}
+		}
+		upstreamReq2.Header.Set("Content-Type", "application/json")
+		injectProviderSpecificHeaders(provider, upstreamReq2.Header, r)
+		upstreamReq2.Header.Set("Accept", "text/event-stream")
+		resp2, err2 := s.httpClientStream.Do(upstreamReq2)
+		if err2 != nil {
+			return streamResult{upstreamErr: fmt.Errorf("upstream request failed: %w", err2)}
+		}
+		resp = resp2
+	}
+
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
 		errBody, _ := io.ReadAll(resp.Body)
+		// 适配器令牌过期（401/403）：作废缓存，让下一次请求重新握手。
+		if adapterSpec != nil && adapterSpec.Preflight != nil &&
+			(resp.StatusCode == http.StatusUnauthorized || resp.StatusCode == http.StatusForbidden) {
+			translator.InvalidateToken(provider.BaseURL, adapterSpec.ID)
+		}
 		return streamResult{upstreamErr: &UpstreamError{StatusCode: resp.StatusCode, Body: errBody}}
 	}
 
@@ -107,7 +211,28 @@ func (s *Server) streamFromUpstream(w http.ResponseWriter, r *http.Request, req 
 
 	// 使用 Scanner 逐行读取上游 SSE
 	// 默认 64KB 行上限会被大 chunk（长 reasoning/大响应）撑爆导致流中断，扩容到 10MB
-	scanner := bufio.NewScanner(resp.Body)
+	// Gemini 源：经翻译器把 Gemini SSE 实时转成 OpenAI SSE 流，后续解析逻辑完全复用。
+	scanSrc := io.Reader(resp.Body)
+	if adapterSpec != nil {
+		label := fmt.Sprintf("%s · %s", provider.Name, candidate.Model)
+		if adapterSpec.SupportsStream() {
+			scanSrc = translator.NewAdapterSSETranslator(adapterSpec, resp.Body, label)
+		} else {
+			// 上游只会整包返回：读完后包成单块 OpenAI SSE，对下游客户端仍是标准流式体验。
+			oneShot, rerr := io.ReadAll(io.LimitReader(resp.Body, 8<<20))
+			if rerr != nil {
+				return streamResult{upstreamErr: rerr}
+			}
+			scanSrc = translator.NewAdapterOneShotStream(adapterSpec, oneShot, label)
+		}
+	} else if isGemini {
+		scanSrc = translator.NewGeminiSSETranslator(resp.Body, fmt.Sprintf("%s · %s", provider.Name, candidate.Model))
+	} else if isClaude {
+		scanSrc = translator.NewClaudeSSETranslator(resp.Body, fmt.Sprintf("%s · %s", provider.Name, candidate.Model))
+	} else if isResponses {
+		scanSrc = translator.NewResponsesSSETranslator(resp.Body, fmt.Sprintf("%s · %s", provider.Name, candidate.Model))
+	}
+	scanner := bufio.NewScanner(scanSrc)
 	scanner.Buffer(make([]byte, 0, 1<<20), 10<<20)
 	for scanner.Scan() {
 		line := scanner.Text()
@@ -180,22 +305,25 @@ func (s *Server) streamFromUpstream(w http.ResponseWriter, r *http.Request, req 
 		}
 	}
 
-	// 记录 usage
+	// 记录 usage（真实值缺失时按字符估算兜底）
+	pt := 0
+	ct := 0
 	if usageObj != nil {
-		pt := 0
-		ct := 0
 		if v, ok := usageObj["prompt_tokens"].(float64); ok {
 			pt = int(v)
 		}
 		if v, ok := usageObj["completion_tokens"].(float64); ok {
 			ct = int(v)
 		}
-		s.recordStreamUsage(provider, candidate.Model, pt, ct)
-		s.recordStreamBudget(provider, candidate.Model, pt, ct)
-		result.totalTokens = pt + ct
-		result.promptTokens = pt
-		result.completionTokens = ct
 	}
+	promptText := promptTextFromMessages(req.Messages)
+	completionText := accumulated.String()
+	hpt, hct := s.recordStreamUsage(provider, candidate.Model, pt, ct, promptText, completionText)
+	// 成本护栏仍按上游真实值（缺失不估算计费），避免误扣费
+	s.recordStreamBudget(provider, candidate.Model, pt, ct)
+	result.totalTokens = hpt + hct
+	result.promptTokens = hpt
+	result.completionTokens = hct
 
 	if err := scanner.Err(); err != nil {
 		result.upstreamErr = err
@@ -206,11 +334,11 @@ func (s *Server) streamFromUpstream(w http.ResponseWriter, r *http.Request, req 
 }
 
 // forwardStreamWithFailover 流式转发（带自动故障转移 + 续写）
-func (s *Server) forwardStreamWithFailover(w http.ResponseWriter, r *http.Request, req *ChatRequest, body []byte, candidates []*engine.Candidate, prelude, cacheExactKey, cachePromptNorm string, vkey *storage.VKey) {
+func (s *Server) forwardStreamWithFailover(w http.ResponseWriter, r *http.Request, req *ChatRequest, body []byte, candidates []*engine.Candidate, prelude, cacheExactKey, cachePromptNorm string, vkey *storage.VKey, sessionID string) {
 	maxAttempts := 1
 
 	accumulated := ""
-	allBusy := true       // 只要有一个候选真正尝试过，就置 false
+	allBusy := true      // 只要有一个候选真正尝试过，就置 false
 	headersSent := false // SSE 头是否已写（跨候选共享，failover 时不重复写头/prelude）
 
 	for attempt := 0; attempt < maxAttempts; attempt++ {
@@ -237,6 +365,11 @@ func (s *Server) forwardStreamWithFailover(w http.ResponseWriter, r *http.Reques
 			if result.streamOK {
 				// 完整成功：记录熔断成功
 				s.circuits.RecordSuccess(modelKey)
+				// C2/C3：记录末次成功 provider + 会话绑定（会话亲和，平手优先）
+				s.lkgp.Record(req.Model, candidate.Provider.Name)
+				if sessionID != "" {
+					s.affinity.Bind(sessionID, candidate.Provider.Name)
+				}
 				// Prometheus 指标（流式成功；token 明细已在 streamFromUpstream 记账，
 				// 此处直方图只需耗时 + 计数，token 按 usage 拆分不可得时记 0）
 				s.metrics.ObserveRequest(candidate.Provider.Name, candidate.Model, "ok", time.Since(started), result.promptTokens, result.completionTokens)
@@ -369,19 +502,25 @@ func (s *Server) recordStreamBudget(provider *config.Provider, model string, pro
 		}
 	}
 	s.budget.AddCost(model, provider.Name, promptTokens, completionTokens, priceIn, priceOut)
+	// A11：同非流式路径，跨过阈值时推送 quota_exceeded 钩子
+	s.checkBudgetThreshold()
 }
 
-// recordStreamUsage 记录流式请求的 usage
-func (s *Server) recordStreamUsage(provider *config.Provider, model string, promptTokens, completionTokens int) {
-	if s.usage == nil {
-		return
+// recordStreamUsage 记录流式请求的 usage（返回混合计数后的 pt/ct 供调用方复用）。
+// 上游真实值 > 0 时采用真实值；缺失或为 0 时用 promptText/completionText 估算兜底。
+func (s *Server) recordStreamUsage(provider *config.Provider, model string, promptTokens, completionTokens int, promptText, completionText string) (int, int) {
+	pt := storage.HybridTokens(promptTokens, promptText)
+	ct := storage.HybridTokens(completionTokens, completionText)
+	if s.usage == nil || (pt == 0 && ct == 0) {
+		return pt, ct
 	}
 	_ = s.usage.Append(storage.UsageRecord{
 		Time:             time.Now(),
 		Provider:         provider.Name,
-		Model:            model,
-		PromptTokens:     promptTokens,
-		CompletionTokens: completionTokens,
-		TotalTokens:      promptTokens + completionTokens,
+		Model:            s.normalizeUsageModel(model),
+		PromptTokens:     pt,
+		CompletionTokens: ct,
+		TotalTokens:      pt + ct,
 	})
+	return pt, ct
 }

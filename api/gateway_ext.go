@@ -8,6 +8,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"log"
 	"net/http"
 	"strconv"
 	"strings"
@@ -42,6 +43,7 @@ func (h *AdminHandler) registerGatewayExtRoutes(mux *http.ServeMux) {
 	mux.HandleFunc("/api/cache", h.handleCacheAdmin)
 	mux.HandleFunc("/api/budget-status", h.handleBudgetStatus)
 	mux.HandleFunc("/api/price-sync", h.handlePriceSync)
+	mux.HandleFunc("/api/free-model-guard", h.handleFreeModelGuard)
 }
 
 // ---------- 模型价格自动同步（models.dev） ----------
@@ -71,6 +73,30 @@ func (h *AdminHandler) handlePriceSync(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		_ = json.NewEncoder(w).Encode(map[string]interface{}{"ok": true, "count": n})
+	default:
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+	}
+}
+
+// ---------- 免费模型自动巡检 ----------
+
+// handleFreeModelGuard GET 返回巡检状态；POST 立即触发一次巡检
+func (h *AdminHandler) handleFreeModelGuard(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
+	switch r.Method {
+	case http.MethodGet:
+		if h.freeModelGuard == nil {
+			http.Error(w, "free-model-guard not available", http.StatusNotImplemented)
+			return
+		}
+		_ = json.NewEncoder(w).Encode(map[string]interface{}{"ok": true, "data": h.freeModelGuard.Status()})
+	case http.MethodPost:
+		if h.freeModelGuard == nil {
+			http.Error(w, "free-model-guard not available", http.StatusNotImplemented)
+			return
+		}
+		go h.freeModelGuard.CheckNow()
+		_ = json.NewEncoder(w).Encode(map[string]interface{}{"ok": true, "message": "triggered"})
 	default:
 		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
 	}
@@ -134,24 +160,16 @@ func (h *AdminHandler) handleAliasesPost(w http.ResponseWriter, r *http.Request)
 		cleaned = append(cleaned, a)
 	}
 
-	// 全量替换：删除全部旧 alias 段，重建
-	if ids, _ := h.uciTool.GetSectionNames("alias"); len(ids) > 0 {
-		_ = h.uciTool.DeleteSections(ids)
-	}
+	// 全量替换：P2-5 改为单次 uci batch 原子替换（删除旧段 + 重建新段一次 commit），
+	// 避免旧实现「先 DeleteSections、再逐个 AddSection+SetOptionWithCommit 各单独 commit」
+	// 在中途失败时留下半删半建的中间态。
+	items := make([]ReplaceItem, 0, len(cleaned))
 	for _, a := range cleaned {
-		secID, err := h.uciTool.AddSection("alias")
-		if err != nil {
-			http.Error(w, fmt.Sprintf("add alias failed: %v", err), http.StatusInternalServerError)
-			return
-		}
-		if err := h.uciTool.SetOptionWithCommit("alias", secID, "name", a.Name); err != nil {
-			http.Error(w, fmt.Sprintf("set alias name failed: %v", err), http.StatusInternalServerError)
-			return
-		}
-		if err := h.uciTool.SetOptionWithCommit("alias", secID, "target", a.Target); err != nil {
-			http.Error(w, fmt.Sprintf("set alias target failed: %v", err), http.StatusInternalServerError)
-			return
-		}
+		items = append(items, ReplaceItem{Options: map[string]string{"name": a.Name, "target": a.Target}})
+	}
+	if err := h.uciTool.ReplaceSectionsAtomic("alias", items); err != nil {
+		http.Error(w, fmt.Sprintf("replace aliases failed: %v", err), http.StatusInternalServerError)
+		return
 	}
 
 	h.reloadAndStore()
@@ -206,8 +224,15 @@ func (h *AdminHandler) handleHooksPost(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// 校验：URL 必须 http(s)；事件白名单过滤
-	validEvent := map[string]bool{"request_done": true, "request_failed": true}
+	// 校验：URL 必须 http(s)；事件白名单过滤（与 proxy/hooks.go 枚举对齐，共 6 种）
+	validEvent := map[string]bool{
+		"request_done":   true,
+		"request_failed": true,
+		"provider_down":  true,
+		"provider_up":    true,
+		"quota_exceeded": true,
+		"circuit_open":   true,
+	}
 	type hookItem struct {
 		url, secret string
 		events      []string
@@ -235,30 +260,21 @@ func (h *AdminHandler) handleHooksPost(w http.ResponseWriter, r *http.Request) {
 		cleaned = append(cleaned, hookItem{url: u, secret: strings.TrimSpace(hk.Secret), events: evs, enabled: enabled})
 	}
 
-	// 全量替换
-	if ids, _ := h.uciTool.GetSectionNames("hook"); len(ids) > 0 {
-		_ = h.uciTool.DeleteSections(ids)
-	}
+	// 全量替换：P2-5 改为单次 uci batch 原子替换（删除旧段 + 重建新段一次 commit）。
+	items := make([]ReplaceItem, 0, len(cleaned))
 	for _, hk := range cleaned {
-		secID, err := h.uciTool.AddSection("hook")
-		if err != nil {
-			http.Error(w, fmt.Sprintf("add hook failed: %v", err), http.StatusInternalServerError)
-			return
-		}
-		if err := h.uciTool.SetOptionWithCommit("hook", secID, "url", hk.url); err != nil {
-			http.Error(w, fmt.Sprintf("set hook url failed: %v", err), http.StatusInternalServerError)
-			return
-		}
+		opt := map[string]string{"url": hk.url}
 		if !hk.enabled {
-			_ = h.uciTool.SetOptionWithCommit("hook", secID, "enabled", "0")
+			opt["enabled"] = "0"
 		}
 		if hk.secret != "" {
-			_ = h.uciTool.SetOptionWithCommit("hook", secID, "secret", hk.secret)
+			opt["secret"] = hk.secret
 		}
-		if err := h.uciTool.SetList("hook", secID, "events", hk.events); err != nil {
-			http.Error(w, fmt.Sprintf("set hook events failed: %v", err), http.StatusInternalServerError)
-			return
-		}
+		items = append(items, ReplaceItem{Options: opt, Lists: map[string][]string{"events": hk.events}})
+	}
+	if err := h.uciTool.ReplaceSectionsAtomic("hook", items); err != nil {
+		http.Error(w, fmt.Sprintf("replace hooks failed: %v", err), http.StatusInternalServerError)
+		return
 	}
 
 	h.reloadAndStore()
@@ -274,11 +290,14 @@ func (h *AdminHandler) handleGatewaySettings(w http.ResponseWriter, r *http.Requ
 	case http.MethodGet:
 		cfg := h.cfg.Load()
 		_ = json.NewEncoder(w).Encode(map[string]interface{}{
-			"ok":               true,
-			"cache":            cfg.EffectiveCache(),
-			"budget":           cfg.EffectiveBudget(),
-			"max_concurrency":  cfg.MaxConcurrency,
+			"ok":                true,
+			"cache":             cfg.EffectiveCache(),
+			"budget":            cfg.EffectiveBudget(),
+			"max_concurrency":   cfg.MaxConcurrency,
 			"strict_capability": cfg.StrictCapability(),
+			"ssrf_strict":       cfg.SSRFStrict(),
+			"allow_clients":     cfg.AllowClients(),
+			"banned_providers":  cfg.BannedProviders(),
 		})
 	case http.MethodPost:
 		h.handleGatewaySettingsPost(w, r)
@@ -304,6 +323,9 @@ func (h *AdminHandler) handleGatewaySettingsPost(w http.ResponseWriter, r *http.
 		BudgetWarnPct    *int     `json:"budget_warning_pct"`
 		MaxConcurrency   *int     `json:"max_concurrency"`
 		StrictCapability *bool    `json:"strict_capability"`
+		SSRFStrict       *bool    `json:"ssrf_strict"`
+		AllowClients     *string  `json:"allow_clients"`
+		BannedProviders  *string  `json:"banned_providers"`
 	}
 	if err := json.Unmarshal(body, &req); err != nil {
 		http.Error(w, fmt.Sprintf("invalid request: %v", err), http.StatusBadRequest)
@@ -352,6 +374,21 @@ func (h *AdminHandler) handleGatewaySettingsPost(w http.ResponseWriter, r *http.
 	}
 	if req.StrictCapability != nil {
 		_ = set("strict_capability", b2s(*req.StrictCapability))
+	}
+	if req.SSRFStrict != nil {
+		_ = set("ssrf_strict", b2s(*req.SSRFStrict))
+	}
+	if req.AllowClients != nil {
+		if err := h.uciTool.SetList("model-gateway", "settings", "allow_clients", splitList(*req.AllowClients)); err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+	}
+	if req.BannedProviders != nil {
+		if err := h.uciTool.SetList("model-gateway", "settings", "banned_providers", splitList(*req.BannedProviders)); err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
 	}
 
 	h.reloadAndStore()
@@ -426,6 +463,20 @@ func (h *AdminHandler) reloadAndStore() {
 			h.cfg.Store(newCfg)
 		}
 	}
+}
+
+// splitList 将逗号/换行/空格/分号分隔的文本拆成去空白后的字符串列表，忽略空项。
+// 用于 IP 白名单、封禁 Provider 等多值文本字段的解析。
+func splitList(s string) []string {
+	var out []string
+	for _, part := range strings.FieldsFunc(s, func(r rune) bool {
+		return r == ',' || r == '\n' || r == ' ' || r == '\t' || r == ';' || r == '\r'
+	}) {
+		if part = strings.TrimSpace(part); part != "" {
+			out = append(out, part)
+		}
+	}
+	return out
 }
 
 // ---------- 虚拟密钥（子密钥）管理 ----------
@@ -579,17 +630,27 @@ func (h *AdminHandler) handleVKeys(w http.ResponseWriter, r *http.Request) {
 // ---------- 成本/用量仪表盘 ----------
 
 type costAgg struct {
-	Requests    int     `json:"requests"`
-	Prompt      int     `json:"prompt_tokens"`
-	Completion  int     `json:"completion_tokens"`
-	CostUSD     float64 `json:"cost_usd"`
+	Requests      int      `json:"requests"`
+	Prompt        int      `json:"prompt_tokens"`
+	Completion    int      `json:"completion_tokens"`
+	CostUSD       float64  `json:"cost_usd"`
+	UnknownModels []string `json:"unknown_models,omitempty"` // F9：未收录模型（成本为 0 需人工确认）
 }
 
-func (a *costAgg) add(rec storage.UsageRecord, cost float64) {
+func (a *costAgg) add(rec storage.UsageRecord, cost float64, unknown bool) {
 	a.Requests++
 	a.Prompt += rec.PromptTokens
 	a.Completion += rec.CompletionTokens
 	a.CostUSD += cost
+	if unknown && rec.Model != "" {
+		// 去重追加
+		for _, m := range a.UnknownModels {
+			if m == rec.Model {
+				return
+			}
+		}
+		a.UnknownModels = append(a.UnknownModels, rec.Model)
+	}
 }
 
 // handleCostDashboard GET 聚合成本与用量（按 provider/model/日），并附预算状态。
@@ -623,15 +684,20 @@ func (h *AdminHandler) handleCostDashboard(w http.ResponseWriter, r *http.Reques
 	}
 	for _, rec := range records {
 		cost := 0.0
+		unknown := false
 		if h.cat != nil {
 			if e := h.cat.Lookup(rec.Model); e != nil {
 				cost = (float64(rec.PromptTokens)/1e6)*e.PriceIn + (float64(rec.CompletionTokens)/1e6)*e.PriceOut
+			} else {
+				unknown = true
+				// F9：未收录模型记 unknown 并告警（仅首次日志，避免刷屏）
+				log.Printf("[cost] unknown model %q for provider %q — cost=0, please add to models_catalog.json", rec.Model, rec.Provider)
 			}
 		}
-		get(byProvider, rec.Provider).add(rec, cost)
-		get(byModel, rec.Model).add(rec, cost)
-		get(byDay, rec.Time.Format("2006-01-02")).add(rec, cost)
-		total.add(rec, cost)
+		get(byProvider, rec.Provider).add(rec, cost, unknown)
+		get(byModel, rec.Model).add(rec, cost, unknown)
+		get(byDay, rec.Time.Format("2006-01-02")).add(rec, cost, unknown)
+		total.add(rec, cost, unknown)
 	}
 
 	bc := h.cfg.Load().EffectiveBudget()

@@ -92,6 +92,25 @@ body {
 [data-theme="dark"] ::-webkit-scrollbar-thumb { background: rgba(255, 255, 255, 0.2); }
 [data-theme="dark"] ::-webkit-scrollbar-thumb:hover { background: rgba(255, 255, 255, 0.3); }
 
+/* P1-U1 响应式：窄屏（手机/平板竖屏）适配，避免横向溢出与拥挤 */
+@media (max-width: 820px) {
+  body { padding: 12px 8px; }
+  .mac-window { max-width: 100%; border-radius: 10px; }
+  /* 顶部标签栏在窄屏自动换行，避免被挤压变形 */
+  .main-tabs { flex-wrap: wrap; }
+  /* 头部操作区换行 */
+  .header-actions { flex-wrap: wrap; }
+  /* 带固定 gap 的水平工具栏在窄屏换行 */
+  .toolbar, .actions-row { flex-wrap: wrap; }
+  /* 模态框在窄屏占满屏宽 */
+  .modal-content { max-width: 100% !important; width: 100%; height: 100vh; border-radius: 0; }
+}
+@media (max-width: 480px) {
+  body { padding: 8px 4px; }
+  .mac-window { border-radius: 8px; }
+  .main-tabs { gap: 4px; }
+}
+
 .mac-window {
   width: 100%;
   max-width: 1400px;
@@ -364,9 +383,10 @@ body {
 
 [data-theme="dark"] .table-container { background: rgba(0, 0, 0, 0.2); box-shadow: none; }
 
-table { width: 100%; border-collapse: collapse; }
+table { width: 100%; border-collapse: collapse; table-layout: fixed; }
 
 th {
+  position: relative;
   background: rgba(0, 0, 0, 0.02);
   padding: 10px 16px;
   text-align: left;
@@ -389,6 +409,22 @@ tbody tr { transition: background 0.1s; }
 tbody tr:hover { background: rgba(0, 0, 0, 0.03); }
 [data-theme="dark"] tbody tr:hover { background: rgba(255, 255, 255, 0.04); }
 tbody tr:last-child td { border-bottom: none; }
+
+/* 稳定性表：列宽自适应 + 拖拽调整 */
+.inspect-cell { white-space: nowrap; overflow: hidden; }
+.model-name-cell { max-width: 340px; }
+.model-name-cell .model-name,
+.model-name-cell .model-desc {
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 340px;
+}
+.col-resizer {
+  position: absolute; top: 0; right: 0; width: 7px; height: 100%;
+  cursor: col-resize; user-select: none; z-index: 2;
+  border-right: 1px solid var(--mac-border);
+}
+.col-resizer:hover, .col-resizer.active { background: var(--accent-primary); opacity: 0.35; border-right-color: transparent; }
+/* 第一列左侧视觉边界（与列间分隔线一致的淡灰竖线） */
+#stabilityTable th:first-child, #stabilityTable td:first-child { border-left: 1px solid var(--mac-border); }
 
 .model-name { font-weight: 600; color: var(--text-primary); font-size: 14px;}
 .model-desc { font-size: 12px; color: var(--text-secondary); margin-top: 4px; }
@@ -436,14 +472,25 @@ tbody tr:last-child td { border-bottom: none; }
 .rg-hint { font-size:11px; color: var(--text-secondary); margin-top:6px; }
 .rg-empty { font-size:12px; color: var(--text-secondary); padding:6px 0; }
 
-.avail-wrap { display: flex; align-items: center; gap: 10px; }
-.avail-bar {
-  flex: 1; max-width: 80px; height: 5px; border-radius: 3px;
-  background: rgba(0, 0, 0, 0.08); overflow: hidden;
+.avail-text { font-variant-numeric: tabular-nums; font-weight: 500; font-size: 12px; }
+
+/* 列显隐设置面板（齿轮） */
+.col-panel {
+  position: fixed; z-index: 60;
+  background: var(--bg-elevated, #fff);
+  border: 1px solid var(--border, #e5e7eb); border-radius: 10px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.18);
+  padding: 12px 14px; min-width: 210px;
 }
-[data-theme="dark"] .avail-bar { background: rgba(255, 255, 255, 0.1); }
-.avail-bar-fill { height: 100%; border-radius: 3px; transition: width 1s ease; }
-.avail-text { font-variant-numeric: tabular-nums; font-weight: 500; font-size: 12px; width: 40px;}
+[data-theme="dark"] .col-panel { background: #232936; border-color: #384154; }
+.col-panel h4 { margin: 0 0 8px; font-size: 13px; font-weight: 600; }
+.col-panel label.col-item {
+  display: flex; align-items: center; gap: 8px;
+  font-size: 13px; padding: 5px 2px; cursor: pointer; user-select: none;
+}
+.col-panel label.col-item:hover { background: rgba(127, 127, 127, 0.08); border-radius: 6px; }
+.col-panel .col-panel-actions { margin-top: 10px; display: flex; gap: 8px; }
+.gear-btn { font-size: 15px; line-height: 1; padding: 6px 11px; }
 
 .latency { font-variant-numeric: tabular-nums; }
 .latency.fast { color: var(--success); }
@@ -665,9 +712,18 @@ input:checked + .slider:before { transform: translateX(14px); }
 .model-disabled-row { opacity:.45; }
 .model-disabled-row:hover { opacity:.6; }
 
+/* U6 修复：Tab 单一数据源，样式由 switchMainTab 统一控制，避免与内联 style 双写失同步 */
+.main-tab { border:none; background:transparent; color:var(--text-secondary); font-weight:500; }
+
 </style>
 </head>
 <body>
+<noscript>
+  <div style="padding:48px 24px; text-align:center; font-family:-apple-system,system-ui,'PingFang SC',sans-serif; color:#333;">
+    <h2>需要启用 JavaScript</h2>
+    <p>本 AI 模型网关管理面板是单页应用，必须启用 JavaScript 才能正常运行。请在浏览器设置中开启 JavaScript 后重新打开。</p>
+  </div>
+</noscript>
 <script>
   if (localStorage.getItem('theme') === 'dark') {
     document.documentElement.setAttribute('data-theme', 'dark');
@@ -683,21 +739,17 @@ input:checked + .slider:before { transform: translateX(14px); }
 
 <div class="mac-window">
   <div class="mac-titlebar">
-    <div class="mac-controls">
-      <div class="mac-btn close"></div>
-      <div class="mac-btn minimize"></div>
-      <div class="mac-btn zoom"></div>
-    </div>
+    <div class="mac-controls"></div>
     <div class="mac-title">模型仪表盘</div>
   </div>
   
   <div class="mac-content">
     <div class="header-actions">
       <div style="display: flex; align-items: center; gap: 24px;">
-        <h1 style="margin: 0;">AI 模型网关面板 <span style="font-size: 12px; font-weight: 500; color: var(--text-secondary); background: var(--mac-border); padding: 2px 8px; border-radius: 6px; vertical-align: middle; margin-left: 4px;">v1.5.3</span></h1>
+        <h1 style="margin: 0;">AI 模型网关面板 <span style="font-size: 12px; font-weight: 500; color: var(--text-secondary); background: var(--mac-border); padding: 2px 8px; border-radius: 6px; vertical-align: middle; margin-left: 4px;">v1.9.0</span></h1>
         <div class="main-tabs" style="display: flex; gap: 6px; background: rgba(0,0,0,0.04); padding: 4px; border-radius: 8px; border: 1px solid rgba(0,0,0,0.05);">
-          <button id="tab-monitor" class="btn" onclick="switchMainTab('monitor')" style="border: none; font-weight: 600; box-shadow: 0 1px 3px rgba(0,0,0,0.1); background: var(--mac-window-bg); color: var(--text-primary);">实时监控</button>
-          <button id="tab-stats" class="btn" onclick="switchMainTab('stats')" style="border: none; font-weight: 500; box-shadow: none; background: transparent; color: var(--text-secondary);">📊 统计</button>
+          <button id="tab-monitor" class="btn main-tab" onclick="switchMainTab('monitor')">实时监控</button>
+          <button id="tab-stats" class="btn main-tab" onclick="switchMainTab('stats')">📊 统计</button>
         </div>
         <div style="display: flex; align-items: center; gap: 6px; position: relative;">
           <span style="font-size: 12px; color: var(--text-secondary); font-weight: 500;">巡检策略</span>
@@ -758,6 +810,8 @@ input:checked + .slider:before { transform: translateX(14px); }
           <button class="btn" onclick="openVKeyModal()" style="font-size: 12px; padding: 4px 10px;">🔑 虚拟密钥</button>
           <button class="btn" onclick="openOutputModelsModal()" style="font-size: 12px; padding: 4px 10px;">📦 管理输出模型</button>
           <button class="btn" onclick="openVisionConfig()" style="font-size: 12px; padding: 4px 10px;">🖼️ 识图配置</button>
+          <button class="btn" onclick="openPlayground()" style="font-size: 12px; padding: 4px 10px;">🧪 测试台</button>
+          <button class="btn" onclick="openTemplates()" style="font-size: 12px; padding: 4px 10px;">📝 提示词模板</button>
         </div>
       </div>
       <div class="copy-row">
@@ -768,7 +822,7 @@ input:checked + .slider:before { transform: translateX(14px); }
       <div class="copy-row">
         <span>API Key:</span>
         <code id="localApiKey">加载中...</code>
-        <button class="btn-copy" onclick="copyText(document.getElementById('localApiKey').textContent, this)">复制</button>
+        <button class="btn-copy" onclick="var k=document.getElementById('localApiKey');if(!k||k.textContent==='加载中...'){showToast('密钥尚未加载完成，请稍候','error');return;}copyText(k.textContent,this)">复制</button>
       </div>
     </div>
     
@@ -779,6 +833,7 @@ input:checked + .slider:before { transform: translateX(14px); }
     <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px; margin-top: 8px;">
       <h2 style="font-size: 16px; font-weight: 600;">上游提供商</h2>
       <div style="display: flex; gap: 8px;">
+        <button class="btn" onclick="openMarketModal()" id="marketBtn">🏪 提供者市场</button>
         <button class="btn" onclick="openPresetModal()" id="presetBtn">⚡ 一键配置</button>
         <button class="btn btn-primary" onclick="openProviderEditor()" id="addProviderBtn">+ 添加提供商</button>
       </div>
@@ -819,27 +874,29 @@ input:checked + .slider:before { transform: translateX(14px); }
         <option value="embedding">嵌入 (embedding)</option>
       </select>
       <input type="text" id="stableSearch" placeholder="搜索模型标识..." oninput="renderStability()">
+      <button type="button" class="btn gear-btn" id="colSettingsBtn" title="设置表格显示的列" onclick="toggleColPanel()">⚙</button>
       <label class="hf-toggle" title="打开后，隐藏最近一次巡检失败（红点）的模型，只看当前可用的模型">
         <input type="checkbox" id="hideFailedToggle" checked onchange="onHideFailedChange()">
         <span class="hf-switch"></span>
         <span>隐藏失败模型</span>
       </label>
     </div>
+    <div id="colPanel" class="col-panel" style="display:none;"></div>
     
     <div class="table-container">
-      <table>
+      <table id="stabilityTable">
         <thead>
           <tr>
-            <th>模型名称</th>
-            <th>分类 / 能力</th>
-            <th width="200">SLA 可用率</th>
-            <th>上下文窗口</th>
-            <th>价格 / 百万 tokens</th>
-            <th>探针次数</th>
-            <th>成功 / 失败</th>
-            <th>平均延迟</th>
-            <th>极速 / 最慢</th>
-            <th>操作</th>
+            <th data-col="模型名称">模型名称<span class="col-resizer" data-col="模型名称"></span></th>
+            <th data-col="分类 / 能力">分类 / 能力<span class="col-resizer" data-col="分类 / 能力"></span></th>
+            <th data-col="SLA 可用率">SLA 可用率<span class="col-resizer" data-col="SLA 可用率"></span></th>
+            <th data-col="巡检状态">巡检状态<span class="col-resizer" data-col="巡检状态"></span></th>
+            <th data-col="上下文窗口">上下文窗口<span class="col-resizer" data-col="上下文窗口"></span></th>
+            <th data-col="价格 / 百万 tokens">价格 / 百万 tokens<span class="col-resizer" data-col="价格 / 百万 tokens"></span></th>
+            <th data-col="探测累计">探测累计<span class="col-resizer" data-col="探测累计"></span></th>
+            <th data-col="平均延迟">平均延迟<span class="col-resizer" data-col="平均延迟"></span></th>
+            <th data-col="极速 / 最慢">极速 / 最慢<span class="col-resizer" data-col="极速 / 最慢"></span></th>
+            <th data-col="操作">操作<span class="col-resizer" data-col="操作"></span></th>
           </tr>
         </thead>
         <tbody id="stableBody"></tbody>
@@ -1084,6 +1141,27 @@ input:checked + .slider:before { transform: translateX(14px); }
         <div style="font-size:12px; color:var(--text-secondary); line-height:1.6;">开启后，路由候选会<b>严格过滤掉不满足所需能力</b>的模型。例如请求带图片（视觉）时，不会把纯文本模型当候选，避免触发「该模型不支持图像」的 400 错误。关闭则沿用原版宽松匹配。</div>
       </div>
 
+      <!-- 安全套件（v1.6.0） -->
+      <div style="margin-bottom:20px; padding:14px; border:1px solid var(--mac-border); border-radius:10px;">
+        <div style="font-weight:600; font-size:14px; margin-bottom:6px;">🛡️ 安全套件</div>
+
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
+          <div style="font-size:13px;">SSRF 严格出站模式</div>
+          <label class="hf-toggle"><input type="checkbox" id="gwSsrfStrict"><span class="hf-switch"></span><span>启用</span></label>
+        </div>
+        <div style="font-size:12px; color:var(--text-secondary); margin-bottom:12px; line-height:1.6;">
+          网关转发到上游前校验目标 IP，<b>默认已拦截回环/链路本地（含云元数据 <code>169.254.169.254</code>）</b>防 SSRF 泄露。开启严格模式会<b>额外拦截 RFC1918 私网</b>（如 <code>192.168.x</code>），仅允许公网——仅在你只用公有云 provider、且不需要连局域网自托管（Ollama 等）时开启。
+        </div>
+
+        <div style="font-size:13px; margin-bottom:4px;">客户端 IP 白名单</div>
+        <textarea id="gwAllowClients" rows="3" placeholder="例如：192.168.1.0/24&#10;10.0.0.5&#10;2001:db8::/32" style="width:100%; box-sizing:border-box; padding:6px 8px; border:1px solid var(--mac-border); border-radius:6px; background:transparent; color:var(--text-primary); font-size:12px; resize:vertical; font-family:monospace;"></textarea>
+        <div style="font-size:12px; color:var(--text-secondary); margin:4px 0 12px; line-height:1.6;">留空=不限制（默认）。填写后仅列表内 IP/CIDR 可调用 <code>/v1/*</code> 代理，其余返回 403。支持裸 IP 或 CIDR，逗号/换行分隔。</div>
+
+        <div style="font-size:13px; margin-bottom:4px;">封禁的 Provider</div>
+        <textarea id="gwBannedProviders" rows="3" placeholder="例如：openai&#10;anthropic" style="width:100%; box-sizing:border-box; padding:6px 8px; border:1px solid var(--mac-border); border-radius:6px; background:transparent; color:var(--text-primary); font-size:12px; resize:vertical; font-family:monospace;"></textarea>
+        <div style="font-size:12px; color:var(--text-secondary); margin-top:4px; line-height:1.6;">被封禁的 provider 永不参与路由/探测/模型列表。仅影响运行态、不删配置；从列表移除即恢复。PII 脱敏开关在「编辑提供商」处。</div>
+      </div>
+
       <!-- REST 回调钩子 -->
       <div style="margin-bottom:8px; padding:14px; border:1px solid var(--mac-border); border-radius:10px;">
         <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
@@ -1180,7 +1258,7 @@ input:checked + .slider:before { transform: translateX(14px); }
     </div>
     <div class="modal-body" style="padding:20px 24px;">
       <div id="updateBody">
-        <div style="margin-bottom:8px;">当前版本：<b>v1.5.3</b> → 最新版本：<b id="updateLatestVer">-</b></div>
+        <div style="margin-bottom:8px;">当前版本：<b>v1.9.0</b> → 最新版本：<b id="updateLatestVer">-</b></div>
         <div id="updateNotes" class="update-notes" style="display:none;"></div>
         <div id="updateProgress" style="display:none;">
           <div class="update-progress-bar"><div class="update-progress-fill" id="updateProgressFill"></div></div>
@@ -1208,6 +1286,7 @@ input:checked + .slider:before { transform: translateX(14px); }
         <div style="display: flex; gap: 8px;">
           <button class="btn" onclick="selectAllModels(true)">全选</button>
           <button class="btn" onclick="selectAllModels(false)">取消全选</button>
+          <button class="btn" id="btnCheckFreeChanges" onclick="checkFreeModelChanges()" title="重新拉取上游模型列表，自动踢掉不再免费的模型">检查免费模型变动</button>
         </div>
         <input type="text" id="modalSearchInput" placeholder="搜索模型..." oninput="filterModalModels()" style="padding: 6px 10px; border-radius: 6px; border: 1px solid var(--mac-border); background: transparent; color: var(--text-primary); font-size: 13px; width: 200px; outline: none; box-shadow: inset 0 1px 2px rgba(0,0,0,0.05);">
       </div>
@@ -1242,26 +1321,96 @@ input:checked + .slider:before { transform: translateX(14px); }
         <label>Base URL</label>
         <input type="text" id="pf_base_url" placeholder="https://api.example.com/v1">
       </div>
-      <div class="form-field">
+      <div class="form-field" id="pf_api_key_field">
         <label>API Key</label>
         <input type="password" id="pf_api_key" placeholder="sk-...">
-        <div style="display:flex; gap:8px; align-items:center; margin-top:8px;">
+        <div style="display:flex; gap:8px; align-items:center; margin-top:8px; flex-wrap:wrap;">
           <label class="form-check" style="margin: 0;">
             <input type="checkbox" id="pf_show_key" onchange="document.getElementById('pf_api_key').type = this.checked ? 'text' : 'password';">
             <span>显示密钥</span>
+          </label>
+          <label class="form-check" style="margin: 0;" id="pf_free_only_wrap">
+            <input type="checkbox" id="pf_free_only" checked>
+            <span>自动选择免费模型</span>
           </label>
           <button class="btn" type="button" style="padding:5px 10px; font-size:12px; margin-left:auto;" onclick="testProviderKey()">测试连接</button>
         </div>
         <div id="pf_verify_status" style="font-size:12px; margin-top:6px; min-height:16px;"></div>
       </div>
+      <div class="form-field" style="margin-top:6px;">
+        <details>
+          <summary style="cursor:pointer; font-size:12px; color:var(--text-secondary); user-select:none;">⚙ 高级鉴权设置（自定义鉴权头）</summary>
+          <div style="margin-top:8px;">
+            <label>鉴权头名称</label>
+            <input type="text" id="pf_auth_header" placeholder="留空 = Authorization（默认 Bearer）">
+            <div class="form-hint">特殊提供者填自定义头：gemini 用 <code>x-goog-api-key</code>，部分用 <code>x-api-key</code> / <code>api-key</code></div>
+            <label style="margin-top:8px;">鉴权值前缀</label>
+            <input type="text" id="pf_auth_scheme" placeholder="留空 = Bearer；裸密钥填 none">
+            <div class="form-hint">头名=Authorization 且前缀留空自动加 <code>Bearer </code>；填 <code>none</code> 表示密钥直接作为头值（不加 Bearer）</div>
+            <label style="margin-top:8px;">上游协议格式</label>
+            <select id="pf_format">
+              <option value="openai">OpenAI 兼容（默认）</option>
+              <option value="gemini">Gemini 原生（generateContent）</option>
+              <option value="claude">Claude 原生（/v1/messages）</option>
+              <option value="openai-responses">OpenAI Responses 原生（/v1/responses）</option>
+              <optgroup label="── 通用协议适配器（非 OpenAI 兼容站点）──">
+                <option value="duckduckgo">DuckDuckGo AI Chat（免 Key，x-vqd 握手）</option>
+                <option value="theoldllm">The Old LLM（免 Key，/api/chatgpt）</option>
+                <option value="felo">Felo Search（免 Key，搜索问答）</option>
+                <option value="text-plain">通用：纯文本端点</option>
+              </optgroup>
+            </select>
+            <div class="form-hint">Claude 原生：直连 <code>api.anthropic.com</code> 等原生接口，网关自动做请求/响应/流式格式转换；鉴权头填 <code>x-api-key</code>、前缀 <code>none</code>；网关会自动附加 <code>anthropic-version</code> 头。工具调用（tool_use）也已翻译。<br>OpenAI Responses 原生：直连实现了 Responses API（<code>/v1/responses</code>）的端点（如部分 OpenAI 兼容网关/代理），网关自动把 OpenAI Chat 协议与 Responses 协议互转（system→instructions、max_tokens→max_output_tokens、function_call↔tool_calls、流式事件翻译）。<br><b>通用协议适配器</b>：给那些「压根不是 OpenAI 接口」的站点用（自定义路径、令牌握手、自定义请求/响应字段）。网关按一份声明式规格自动完成双向协议转换。要接入清单以外的站点、或上游改版导致失效时，把规格写进数据目录的 <code>adapters.json</code> 即可自行修正，<b>无需等新版本</b>。</div>
+            <label style="margin-top:8px;">思考预算（thinking budget，token）</label>
+            <input type="number" id="pf_thinking_budget" min="0" step="1" placeholder="0 = 不限制">
+            <div class="form-hint">对支持推理的模型（Claude extended thinking / Gemini thinking）设置思考 token 上限，防止“想太久烧太多”。仅 <code>claude</code> / <code>gemini</code> 格式生效，<code>openai</code> 推理模型走其原生参数、此处不注入。需小于该请求的 max_tokens。</div>
+            <label style="margin-top:8px;">免 Key 提供者的 Anonymous Key（可选）</label>
+            <input type="text" id="pf_anonymous_api_key" placeholder="如 AI Horde 的 0000000000，留空 = 不发送任何鉴权头">
+            <div class="form-hint">仅当提供者本身支持匿名访问但需固定 key 时填写；普通免 Key 提供者留空即可。</div>
+          </div>
+        </details>
+      </div>
       <div id="providerModalMsg" style="font-size: 12px; display: none;"></div>
     </div>
     <div class="modal-footer">
-      <span style="font-size: 12px; color: var(--text-secondary);" id="providerModalHint"></span>
+      <span style="font-size: 12px; color: var(--text-secondary); white-space: pre-line; line-height: 1.5;" id="providerModalHint"></span>
       <div style="display: flex; gap: 12px;">
         <button class="btn" onclick="closeProviderEditor()">取消</button>
         <button class="btn btn-primary" id="providerSaveBtn" onclick="submitProviderForm()">保存并拉取模型</button>
       </div>
+    </div>
+  </div>
+</div>
+
+<!-- 提供者市场弹窗 -->
+<div class="modal-overlay" id="marketModal" onclick="if(event.target===this) closeMarketModal()">
+  <div class="modal-content" style="max-width: 720px;">
+    <div class="modal-header">
+      <div class="modal-title">🏪 提供者市场</div>
+      <div class="mac-btn close" onclick="closeMarketModal()" style="cursor: pointer;"></div>
+    </div>
+    <div class="modal-body">
+      <div style="display:flex; gap:10px; margin-bottom:10px; align-items:center;">
+        <input type="text" id="marketSearch" placeholder="搜索提供者 / 模型名…" oninput="renderMarket()"
+               style="flex:1; padding:7px 10px; border:1px solid var(--mac-border); border-radius:6px; background:var(--mac-window-bg); color:var(--text-primary); font-size:13px; outline:none;">
+        <label class="form-check" style="margin:0; white-space:nowrap;">
+          <input type="checkbox" id="marketFreeOnly" onchange="renderMarket()"><span>只看免费</span>
+        </label>
+        <label class="form-check" style="margin:0; white-space:nowrap;">
+          <input type="checkbox" id="marketKeylessOnly" onchange="renderMarket()"><span>只看免Key</span>
+        </label>
+        <label class="form-check" style="margin:0; white-space:nowrap;">
+          <input type="checkbox" id="marketHideAdded" onchange="renderMarket()"><span>隐藏已添加</span>
+        </label>
+      </div>
+      <div id="marketStats" style="font-size:12px; color:var(--text-secondary); margin-bottom:8px;"></div>
+      <div id="marketList" style="max-height:420px; overflow-y:auto; display:flex; flex-direction:column; gap:8px;">
+        <div class="empty">加载中…</div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <span style="font-size:12px; color:var(--text-secondary);">目录随包内置（均为 OpenAI 兼容接口），点「添加」填入 API Key 即可接入</span>
+      <button class="btn" onclick="closeMarketModal()">关闭</button>
     </div>
   </div>
 </div>
@@ -1322,17 +1471,91 @@ input:checked + .slider:before { transform: translateX(14px); }
 /* ============ 鉴权与 fetch 封装 ============ */
 const TOKEN_KEY = 'gateway_admin_token';
 let _adminKey = "";
+let _csrfToken = "";   // P1-3：CSRF 令牌，写操作需随 X-CSRF-Token 头携带
 function getToken() { return _adminKey; }
-function setToken(t) { _adminKey = t || ""; }
-function clearToken() { _adminKey = ""; }
+function setToken(t) {
+  _adminKey = t || "";
+  try { if (t) localStorage.setItem(TOKEN_KEY, t); else localStorage.removeItem(TOKEN_KEY); } catch (e) {}
+}
+function clearToken() {
+  _adminKey = "";
+  _csrfToken = "";
+  try { localStorage.removeItem(TOKEN_KEY); } catch (e) {}
+}
+function loadSavedToken() {
+  try { return localStorage.getItem(TOKEN_KEY) || ""; } catch (e) { return ""; }
+}
+// P1-3：拉取 CSRF 令牌（需 Bearer 鉴权）。后端重启后令牌刷新，这里重新获取。
+async function fetchCsrf() {
+  const t = getToken();
+  if (!t) return;
+  try {
+    const r = await fetch('/api/csrf', { headers: { 'Authorization': 'Bearer ' + t } });
+    if (r.ok) {
+      const d = await r.json();
+      if (d && d.csrf_token) _csrfToken = d.csrf_token;
+    }
+  } catch (e) {}
+}
 
-function showGate() {}
-async function submitGate() {}
+/* P0 安全修复：后端不再向匿名请求返回完整 admin_key（旧版靠可伪造的 Origin 头判同源）。
+   面板首次访问弹出密钥门，验证通过后写入 localStorage，后续自动免登录。 */
+function showGate() {
+  let g = document.getElementById('authGate');
+  if (!g) {
+    g = document.createElement('div');
+    g.id = 'authGate';
+    g.style.cssText = 'position:fixed;inset:0;z-index:99999;background:rgba(0,0,0,.55);display:flex;align-items:center;justify-content:center;backdrop-filter:blur(3px);';
+    g.innerHTML = '<div style="background:var(--bg-card,#1f2430);color:var(--text-primary,#e8eaf0);border:1px solid rgba(128,128,128,.25);border-radius:14px;padding:28px 26px;width:380px;max-width:92vw;box-shadow:0 12px 48px rgba(0,0,0,.45);">'
+      + '<div style="font-size:17px;font-weight:600;margin-bottom:6px;">\uD83D\uDD10 管理密钥验证</div>'
+      + '<div style="font-size:12px;opacity:.75;line-height:1.7;margin-bottom:14px;">请输入网关管理密钥（admin_key）。忘记了可在路由器终端执行：<br><code style="font-size:11px;">uci get model-gateway.settings.admin_key</code></div>'
+      + '<input id="gateKeyInput" type="password" placeholder="sk-..." autocomplete="off" style="width:100%;box-sizing:border-box;padding:9px 10px;border-radius:8px;border:1px solid rgba(128,128,128,.35);background:transparent;color:inherit;font-size:13px;" onkeydown="if(event.key===\'Enter\')submitGate()">'
+      + '<div id="gateError" style="color:#e5534b;font-size:12px;min-height:16px;margin-top:8px;"></div>'
+      + '<button onclick="submitGate()" style="width:100%;margin-top:6px;padding:9px 0;border:none;border-radius:8px;background:var(--accent,#4f8cff);color:#fff;font-size:14px;cursor:pointer;">进入面板</button>'
+      + '</div>';
+    document.body.appendChild(g);
+  }
+  g.style.display = 'flex';
+  const inp = document.getElementById('gateKeyInput');
+  if (inp) { inp.value = ''; setTimeout(function () { inp.focus(); }, 50); }
+}
+function hideGate() {
+  const g = document.getElementById('authGate');
+  if (g) g.style.display = 'none';
+}
+async function submitGate() {
+  const inp = document.getElementById('gateKeyInput');
+  const err = document.getElementById('gateError');
+  const key = ((inp && inp.value) || '').trim();
+  if (!key) { if (err) err.textContent = '请输入密钥'; return; }
+  if (err) err.textContent = '';
+  try {
+    const r = await fetch('/api/config', { headers: { 'Authorization': 'Bearer ' + key } });
+    const d = await r.json();
+    if (d && d.admin_key === key) {
+      setToken(key);
+      hideGate();
+      fetchCsrf(); // P1-3：拉取 CSRF 令牌供后续写操作使用
+      const keyEl = document.getElementById('localApiKey');
+      if (keyEl) keyEl.textContent = key;
+      if (!window._appStarted) { window._appStarted = true; startApp(); }
+    } else {
+      if (err) err.textContent = '密钥不正确';
+    }
+  } catch (e) {
+    if (err) err.textContent = '验证失败：' + (e && e.message || e);
+  }
+}
 
 async function apiFetch(url, options = {}) {
   const token = getToken();
   if (token) {
     options.headers = Object.assign({}, options.headers || {}, { 'Authorization': 'Bearer ' + token });
+  }
+  const method = (options.method || 'GET').toUpperCase();
+  // P1-3：写方法携带 CSRF 令牌（X-CSRF-Token 头）
+  if (method !== 'GET' && method !== 'HEAD' && _csrfToken) {
+    options.headers = Object.assign({}, options.headers || {}, { 'X-CSRF-Token': _csrfToken });
   }
   if (options.body && typeof options.body === 'string') {
     options.headers = Object.assign({}, options.headers || {}, { 'Content-Type': 'application/json' });
@@ -1347,6 +1570,20 @@ async function apiFetch(url, options = {}) {
       clearToken();
       showGate();
       throw new Error('Unauthorized');
+    }
+    // P1-3：CSRF 令牌过期（后端重启）时刷新令牌并重试一次
+    if (r.status === 403 && method !== 'GET' && method !== 'HEAD') {
+      const txt = await r.text().catch(() => '');
+      if (/CSRF/i.test(txt)) {
+        await fetchCsrf();
+        if (_csrfToken) {
+          const opt2 = Object.assign({}, options, {
+            headers: Object.assign({}, options.headers || {}, { 'X-CSRF-Token': _csrfToken })
+          });
+          return await fetch(url, Object.assign({ signal: ctrl.signal }, opt2));
+        }
+      }
+      return r;
     }
     return r;
   } catch (e) {
@@ -1383,6 +1620,22 @@ function toggleTheme() {
     localStorage.setItem('theme', 'dark');
   }
 }
+// U4 修复：页面加载时按当前主题渲染正确图标（深色模式不再错显 🌙）
+function syncThemeIcon() {
+  const tb = document.getElementById('themeBtn');
+  if (tb) tb.innerHTML = (document.documentElement.getAttribute('data-theme') === 'dark') ? '☀️' : '🌙';
+}
+document.addEventListener('DOMContentLoaded', function () {
+  syncThemeIcon();
+  // U8 修复：为装饰性关闭按钮补充 aria-label（无障碍）
+  document.querySelectorAll('.mac-btn.close').forEach(function (b) { if (!b.getAttribute('aria-label')) b.setAttribute('aria-label', '关闭'); });
+});
+// U8 修复：Esc 关闭任意已打开的 modal
+document.addEventListener('keydown', function (e) {
+  if (e.key === 'Escape') {
+    document.querySelectorAll('.modal-overlay.show, .modal.show').forEach(function (m) { m.classList.remove('show'); });
+  }
+});
 
 /* ============ 数据 ============ */
 let data = [];
@@ -1446,21 +1699,21 @@ async function load(force) {
     let providersHtml = '';
     let providerOptionsHtml = '<option value="all">全部提供商</option>';
     list.forEach(p => {
-      providerOptionsHtml += `<option value="${p.name}">${p.name}</option>`;
+      providerOptionsHtml += `<option value="${escAttr(p.name)}">${escapeHtml(p.name)}</option>`;
       providersHtml += `
         <div class="provider-card">
           <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; gap: 6px; flex-wrap: wrap;">
-            <div class="p-name" style="margin-bottom: 0;">${p.name} Configuration</div>
+            <div class="p-name" style="margin-bottom: 0;">${escapeHtml(p.name)} Configuration</div>
             <div style="display: flex; gap: 6px; flex-shrink: 0;">
-              <button class="btn" style="padding: 4px 8px; font-size: 11px;" onclick="openModelManager('${p.name}')">⚙️ 模型</button>
-              <button class="btn" style="padding: 4px 8px; font-size: 11px;" onclick="openProviderEditor('${p.name}')">✏️ 编辑</button>
-              <button class="btn" style="padding: 4px 8px; font-size: 11px; color: var(--danger);" onclick="deleteProvider('${p.name}')">🗑 删除</button>
+              <button class="btn" style="padding: 4px 8px; font-size: 11px;" onclick="openModelManager('${escJsStr(p.name)}')">⚙️ 模型</button>
+              <button class="btn" style="padding: 4px 8px; font-size: 11px;" onclick="openProviderEditor('${escJsStr(p.name)}')">✏️ 编辑</button>
+              <button class="btn" style="padding: 4px 8px; font-size: 11px; color: var(--danger);" onclick="deleteProvider('${escJsStr(p.name)}')">🗑 删除</button>
             </div>
           </div>
           <div class="copy-row">
             <span>Base URL:</span>
-            <code>${p.base_url}</code>
-            <button class="btn-copy" onclick="copyText('${p.base_url}', this)">Copy</button>
+            <code>${escapeHtml(p.base_url)}</code>
+            <button class="btn-copy" onclick="copyText('${escJsStr(p.base_url)}', this)">Copy</button>
           </div>
           <div class="copy-row">
             <span>API Key:</span>
@@ -1510,12 +1763,16 @@ async function loadStability(force) {
 
 let statsDays = 1;
 async function loadUsage() {
+  const box = document.getElementById('usageOverview');
   try {
     const r = await apiFetch(`/api/usage?days=${statsDays}`);
     const data = await r.json();
     renderUsage(data);
   } catch (e) {
-    if (e.message !== 'Unauthorized') console.error("Failed to load usage:", e);
+    if (e.message !== 'Unauthorized') {
+      console.error("Failed to load usage:", e);
+      if (box) box.innerHTML = '<div class="empty" style="color:var(--danger)">消耗统计加载失败：' + escapeHtml(e.message) + ' <button class="btn" style="font-size:12px;padding:2px 8px;" onclick="loadUsage()">重试</button></div>';
+    }
   }
 }
 function switchStatsTab(days) {
@@ -1619,7 +1876,49 @@ function restoreHideFailedToggle() {
   } catch (e) {}
 }
 
+function relTime(ts) {
+  const diff = Math.floor(Date.now() / 1000) - ts;
+  if (diff < 0) diff = 0;
+  if (diff < 60) return '刚刚';
+  if (diff < 3600) return Math.floor(diff / 60) + '分钟前';
+  const d = new Date(ts * 1000);
+  const now = new Date();
+  const pad = n => (n < 10 ? '0' : '') + n;
+  const sameDay = d.getFullYear() === now.getFullYear() && d.getMonth() === now.getMonth() && d.getDate() === now.getDate();
+  if (sameDay) return '今天 ' + pad(d.getHours()) + ':' + pad(d.getMinutes());
+  const y = new Date(now); y.setDate(now.getDate() - 1);
+  const isYest = d.getFullYear() === y.getFullYear() && d.getMonth() === y.getMonth() && d.getDate() === y.getDate();
+  if (isYest) return '昨天 ' + pad(d.getHours()) + ':' + pad(d.getMinutes());
+  return (d.getMonth() + 1) + '月' + d.getDate() + '日';
+}
+
+function inspectStatusHtml(d) {
+  const map = {
+    ok:      { dot: 'var(--success)',        text: '正常',   pulse: false },
+    fail:    { dot: 'var(--danger)',         text: '异常',   pulse: true },
+    error:   { dot: 'var(--danger)',         text: '异常',   pulse: true },
+    pending: { dot: 'var(--text-secondary)', text: '未检测', pulse: false },
+    unknown: { dot: 'var(--text-secondary)', text: '未知',   pulse: false },
+  };
+  const s = map[d.last_status] || map.unknown;
+  let rel;
+  if (d.last_check_at && d.last_check_at > 0) {
+    rel = relTime(d.last_check_at);
+  } else if (d.last_status === 'pending') {
+    rel = '等待巡检';
+  } else {
+    rel = '—';
+  }
+  return `<span style="display:inline-flex;align-items:center;gap:6px;">
+    <span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:${s.dot};${s.pulse ? 'animation:pulse 2s infinite;' : ''}"></span>
+    <span style="color:${s.dot};font-weight:600;">${s.text}</span>
+    <span style="color:var(--text-secondary);font-size:12px;">${rel}</span>
+  </span>`;
+}
+
 function renderStability() {
+  if (!window.hiddenCols) loadColVisibility();
+  initTableFeatures();
   const filter = document.getElementById('stableFilter').value;
   const search = document.getElementById('stableSearch').value.toLowerCase();
   const provider = document.getElementById('providerFilter').value;
@@ -1654,6 +1953,7 @@ function renderStability() {
       ? '该时间范围内暂无巡检记录。<br><span style="font-size:12px;color:var(--text-secondary)">（已开启「隐藏失败模型」，如需查看失败模型请关闭右侧开关；新添加的平台请稍候片刻，巡检完成后自动显示）</span>'
       : '该时间范围内暂无巡检记录。<br><span style="font-size:12px;color:var(--text-secondary)">（新添加的平台请稍候片刻，巡检完成后自动显示）</span>';
     tbody.innerHTML = `<tr><td colspan="10" class="empty">${hint}</td></tr>`;
+    applyColVisibility();
     return;
   }
 
@@ -1662,23 +1962,22 @@ function renderStability() {
     const pctNum = typeof d.availability === 'number' ? d.availability : parseFloat(d.availability || 0);
     const pct = isPending ? '—' : pctNum.toFixed(1);
     const barColor = isPending ? 'var(--text-secondary)' : (pctNum >= 90 ? 'var(--success)' : pctNum >= 50 ? 'var(--warning)' : 'var(--danger)');
-    const barWidth = isPending ? '0%' : Math.min(100, pctNum) + '%';
     const avgL = d.avg_latency_ms !== null ? Math.round(d.avg_latency_ms) + ' ms' : '--';
     const minL = d.min_latency_ms !== null ? Math.round(d.min_latency_ms) + ' ms' : '--';
     const maxL = d.max_latency_ms !== null ? Math.round(d.max_latency_ms) + ' ms' : '--';
 
     const detail = modelDetails[d.model] || {};
     const ctxLen = detail.context_length || detail.max_model_len || '--';
-    const descHtml = detail.desc ? `<div class="model-desc">${detail.desc}</div>` : '';
+    const descHtml = detail.desc ? `<div class="model-desc">${escapeHtml(detail.desc)}</div>` : '';
 
     // 参考库分类信息（tier / capabilities / 价格）
     const ci = modelCatalog[d.model] || {};
-    const tier = ci.tier || '';
-    const tierLabel = { lite: '轻量', mid: '均衡', top: '旗舰' }[tier] || (tier ? tier : '未分类');
+    const tier = ci.tier || 'mid';
+    const tierLabel = { lite: '轻量', mid: '均衡', top: '旗舰' }[tier] || tier;
     const tierBadge = `<span class="model-tier-badge ${tier || 'none'}">${tierLabel}</span>`;
     const capLabelMap = { text: '文本', vision: '视觉', reasoning: '推理', image: '图像', audio: '音频', embedding: '嵌入' };
     const caps = Array.isArray(ci.capabilities) ? ci.capabilities : [];
-    const capBadges = caps.map(c => `<span class="model-cap-badge">${capLabelMap[String(c).toLowerCase()] || c}</span>`).join('');
+    const capBadges = caps.map(c => `<span class="model-cap-badge">${capLabelMap[String(c).toLowerCase()] || escapeHtml(c)}</span>`).join('');
     const priceIn = (ci.price_in !== undefined && ci.price_in !== null) ? ci.price_in : null;
     const priceOut = (ci.price_out !== undefined && ci.price_out !== null) ? ci.price_out : null;
     const priceHtml = (priceIn !== null || priceOut !== null)
@@ -1701,10 +2000,10 @@ function renderStability() {
     const toggleBtn = `<button class="model-toggle-btn ${isEnabled ? 'enabled' : 'disabled'}" data-provider="${escAttr(d.provider)}" data-model="${escAttr(d.model)}" onclick="toggleModelFromBtn(this)">${isEnabled ? '● 启用' : '○ 停用'}</button>`;
 
     return `<tr class="${isEnabled ? '' : 'model-disabled-row'}">
-      <td>
+      <td class="model-name-cell">
         <div class="model-name" style="display: flex; align-items: center;">
-          <span class="model-provider-badge">${d.provider}</span>
-          <span>${d.model}</span>
+          <span class="model-provider-badge">${escapeHtml(d.provider)}</span>
+          <span>${escapeHtml(d.model)}</span>
           ${lastStatusHtml}
         </div>
         ${descHtml}
@@ -1713,16 +2012,13 @@ function renderStability() {
         ${tierBadge}${capBadges}
       </td>
       <td>
-        <div class="avail-wrap">
-          <span class="avail-bar">
-            <span class="avail-bar-fill" style="width:${barWidth};background:${barColor}"></span>
-          </span>
-          <span class="avail-text" style="color:${barColor}">${isPending ? '⚪ 未检测' : pct + '%'}</span>
-        </div>
+        <span class="avail-text" style="color:${barColor}">${isPending ? '⚪ 未检测' : pct + '%'}</span>
+      </td>
+      <td class="inspect-cell">
+        ${inspectStatusHtml(d)}
       </td>
       <td><span class="ctx-cell" data-model="${d.model}" title="点击修改上下文长度" style="cursor:pointer;color:var(--text-secondary);font-variant-numeric:tabular-nums;font-family:ui-monospace,monospace;font-size:12px;">${ctxLen === '--' ? '--' : ctxLen}</span></td>
       <td>${priceHtml}</td>
-      <td style="color:var(--text-secondary)">${d.checks}</td>
       <td style="font-variant-numeric:tabular-nums; font-size:12px;">
         ${isPending ? '<span style="color:var(--text-secondary)">— / —</span>' : `<span style="color:var(--success);font-weight:600">${d.ok}</span><span style="color:var(--text-secondary);margin:0 4px">/</span><span style="color:var(--danger);font-weight:600">${d.fail}</span>`}
       </td>
@@ -1735,7 +2031,194 @@ function renderStability() {
       <td>${toggleBtn}</td>
     </tr>`;
   }).join('');
+  applyColVisibility();
 }
+
+/* ---------- 列显隐设置（齿轮按钮） ---------- */
+function loadColVisibility() {
+  if (window.hiddenCols) return;
+  try {
+    const arr = JSON.parse(localStorage.getItem('mg_hidden_cols') || '[]');
+    window.hiddenCols = new Set(Array.isArray(arr) ? arr : []);
+  } catch (e) {
+    window.hiddenCols = new Set();
+  }
+}
+
+function saveColVisibility() {
+  try { localStorage.setItem('mg_hidden_cols', JSON.stringify(Array.from(window.hiddenCols || []))); } catch (e) {}
+}
+
+function applyColVisibility() {
+  const table = document.getElementById('stabilityTable');
+  if (!table) return;
+  const headRow = table.tHead && table.tHead.rows[0];
+  if (headRow) {
+    for (let i = 0; i < headRow.cells.length; i++) {
+      headRow.cells[i].style.display = (window.hiddenCols && window.hiddenCols.has(i)) ? 'none' : '';
+    }
+  }
+  const body = table.tBodies[0];
+  if (!body) return;
+  for (const row of body.rows) {
+    if (row.cells.length < headRow.cells.length) continue; // 空状态行跳过
+    for (let i = 0; i < row.cells.length; i++) {
+      if (row.cells[i]) row.cells[i].style.display = (window.hiddenCols && window.hiddenCols.has(i)) ? 'none' : '';
+    }
+  }
+}
+
+/* 列宽拖拽调整 + 默认宽度应用（与列显隐按索引隐藏互不冲突，这里按列名存储） */
+const COL_DEFAULT_WIDTHS = {
+  '分类 / 能力': 170, 'SLA 可用率': 95, '巡检状态': 150, '上下文窗口': 120,
+  '价格 / 百万 tokens': 165, '探测累计': 120, '平均延迟': 110, '极速 / 最慢': 130, '操作': 95
+};
+function initTableFeatures() {
+  if (window._tableFeaturesInited) return;
+  window._tableFeaturesInited = true;
+  applyColWidths();
+  initColResize();
+}
+function applyColWidths() {
+  let store;
+  try { store = JSON.parse(localStorage.getItem('mg_col_widths') || '{}'); } catch (e) { store = {}; }
+  const table = document.getElementById('stabilityTable');
+  if (!table || !table.tHead) return;
+  const headRow = table.tHead.rows[0];
+  for (let i = 0; i < headRow.cells.length; i++) {
+    const th = headRow.cells[i];
+    const col = th.getAttribute('data-col');
+    if (!col || col === '模型名称') continue; // 模型名称列保持弹性，吸收剩余宽度
+    const w = store[col] || COL_DEFAULT_WIDTHS[col];
+    if (w) th.style.width = w + 'px';
+  }
+}
+function initColResize() {
+  const table = document.getElementById('stabilityTable');
+  if (!table) return;
+  const resizers = table.querySelectorAll('th .col-resizer');
+  resizers.forEach(function (r) {
+    r.addEventListener('mousedown', function (e) {
+      e.preventDefault();
+      e.stopPropagation();
+      const th = r.closest('th');
+      const colName = th.getAttribute('data-col');
+      const isFlex = (colName === '模型名称'); // 弹性列：吸收剩余宽度，不能存固定宽
+      const startX = e.clientX;
+      let targetTh, startTargetW;
+      if (isFlex) {
+        // 拖动弹性列右边界 = 反向调整下一列（弹性列始终吸收差额，总宽保持 100%）
+        targetTh = nextVisibleTh(table, th);
+        if (!targetTh) return;
+        startTargetW = targetTh.getBoundingClientRect().width;
+      } else {
+        targetTh = th;
+        startTargetW = th.getBoundingClientRect().width;
+      }
+      r.classList.add('active');
+      function onMove(ev) {
+        const delta = ev.clientX - startX;
+        // flex 列：反向调整下一列；普通列：直接调整自身（弹性列吸收差额）
+        let w = isFlex ? (startTargetW - delta) : (startTargetW + delta);
+        if (w < 60) w = 60;
+        targetTh.style.width = w + 'px';
+      }
+      function onUp() {
+        r.classList.remove('active');
+        document.removeEventListener('mousemove', onMove);
+        document.removeEventListener('mouseup', onUp);
+        saveColWidths();
+      }
+      document.addEventListener('mousemove', onMove);
+      document.addEventListener('mouseup', onUp);
+    });
+  });
+}
+function nextVisibleTh(table, th) {
+  const row = table.tHead.rows[0];
+  const cells = row.cells;
+  for (let i = 0; i < cells.length; i++) {
+    if (cells[i] === th) {
+      for (let j = i + 1; j < cells.length; j++) {
+        if (cells[j].style.display !== 'none') return cells[j];
+      }
+      return null;
+    }
+  }
+  return null;
+}
+function saveColWidths() {
+  const table = document.getElementById('stabilityTable');
+  if (!table || !table.tHead) return;
+  const headRow = table.tHead.rows[0];
+  const map = {};
+  for (let i = 0; i < headRow.cells.length; i++) {
+    const th = headRow.cells[i];
+    const col = th.getAttribute('data-col');
+    if (!col || col === '模型名称') continue;
+    if (th.style.display === 'none') continue;
+    map[col] = Math.round(th.getBoundingClientRect().width);
+  }
+  try { localStorage.setItem('mg_col_widths', JSON.stringify(map)); } catch (e) {}
+}
+
+function buildColPanel() {
+  loadColVisibility();
+  const table = document.getElementById('stabilityTable');
+  const panel = document.getElementById('colPanel');
+  if (!table || !panel) return;
+  const headRow = table.tHead.rows[0];
+  let html = '<h4>显示列</h4>';
+  for (let i = 0; i < headRow.cells.length; i++) {
+    const label = (headRow.cells[i].textContent || '').trim();
+    const checked = window.hiddenCols.has(i) ? '' : 'checked';
+    html += '<label class="col-item"><input type="checkbox" data-col="' + i + '" ' + checked + '> ' + escAttr(label) + '</label>';
+  }
+  html += '<div class="col-panel-actions"><button type="button" class="btn" onclick="resetColVisibility()">显示全部</button></div>';
+  panel.innerHTML = html;
+  panel.querySelectorAll('input[type=checkbox]').forEach(cb => {
+    cb.addEventListener('change', function () {
+      const idx = parseInt(cb.dataset.col, 10);
+      if (cb.checked) window.hiddenCols.delete(idx); else window.hiddenCols.add(idx);
+      saveColVisibility();
+      applyColVisibility();
+    });
+  });
+}
+
+function toggleColPanel() {
+  const panel = document.getElementById('colPanel');
+  const btn = document.getElementById('colSettingsBtn');
+  if (!panel || !btn) return;
+  if (panel.style.display === 'block') {
+    panel.style.display = 'none';
+    return;
+  }
+  if (!window._colPanelBuilt) { buildColPanel(); window._colPanelBuilt = true; }
+  const r = btn.getBoundingClientRect();
+  panel.style.top = (r.bottom + 6) + 'px';
+  panel.style.left = r.left + 'px';
+  panel.style.display = 'block';
+}
+
+function resetColVisibility() {
+  window.hiddenCols = new Set();
+  saveColVisibility();
+  buildColPanel();
+  applyColVisibility();
+  const panel = document.getElementById('colPanel');
+  if (panel) panel.style.display = 'none';
+}
+
+// 点击面板外部自动关闭
+document.addEventListener('click', function (e) {
+  const panel = document.getElementById('colPanel');
+  if (!panel || panel.style.display !== 'block') return;
+  if (panel.contains(e.target)) return;
+  if (e.target.closest && e.target.closest('#colSettingsBtn')) return;
+  if (e.target.id === 'colSettingsBtn') return;
+  panel.style.display = 'none';
+});
 
 function escAttr(s) {
   return String(s).replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
@@ -1774,9 +2257,16 @@ async function checkAll() {
   try {
     const r = await apiFetch('/api/check/all', { method: 'POST' });
     const results = await r.json();
-    let ok = 0, fail = 0;
-    Object.values(results).forEach(v => { if (v && v.status === 'ok') ok++; else fail++; });
-    showToast(`检测完成：${ok} 正常 / ${fail} 异常`, fail > 0 ? 'warn' : 'ok');
+    let ok = 0, fail = 0, locked = 0;
+    const lockedNames = [];
+    Object.entries(results).forEach(([k, v]) => {
+      if (!v) return;
+      if (v.status === 'ok') ok++; else fail++;
+      if (v.locked) { locked++; if (lockedNames.length < 5) lockedNames.push(k); }
+    });
+    let msg = `检测完成：${ok} 正常 / ${fail} 异常`;
+    if (locked > 0) msg += ` ｜ 🔒 ${locked} 个模型锁定（连续失败，巡检恢复后自动解锁）`;
+    showToast(msg, fail > 0 || locked > 0 ? 'warn' : 'ok');
   } catch (e) {
     if (e.message !== 'Unauthorized') { console.error("Check failed", e); showToast("检测请求失败", "error"); }
   } finally {
@@ -1886,12 +2376,27 @@ async function openModelManager(provider) {
     const pList = await rProviders.json();
     const pData = pList.find(p => p.name === provider);
     const currentModels = new Set(pData ? (pData.models || []) : []);
+    // 免费模型巡检按钮：仅在 free_only=true 时可用
+    const btnCheckFree = document.getElementById('btnCheckFreeChanges');
+    if (btnCheckFree) {
+      btnCheckFree.style.display = (pData && pData.free_only) ? '' : 'none';
+    }
 
     const rAvailable = await apiFetch(`/api/providers/${provider}/available-models`);
     const availableData = await rAvailable.json();
     if (!availableData.ok) throw new Error("API返回错误");
 
-    const allModels = availableData.models || [];
+    const rawModels = availableData.models || [];
+    // 兼容新旧格式：后端可能返回字符串数组（旧）或对象数组（新，含 is_free/pricing）
+    const allModels = rawModels.map(m => typeof m === 'string' ? m : (m.id || m.model || '')).filter(Boolean);
+    const freeModelSet = new Set();
+    if (pData && pData.free_only) {
+      rawModels.forEach(m => {
+        if (typeof m === 'object' && m.is_free) {
+          freeModelSet.add(m.id || m.model);
+        }
+      });
+    }
     if (allModels.length === 0) {
       document.getElementById('modalModelList').innerHTML = '<div class="empty">该供应商未返回任何可用模型。</div>';
       return;
@@ -1901,7 +2406,7 @@ async function openModelManager(provider) {
 
     let html = '';
     allModels.forEach(m => {
-      const isChecked = currentModels.has(m) ? 'checked' : '';
+      const isChecked = currentModels.has(m) || freeModelSet.has(m) ? 'checked' : '';
       html += `
         <label class="model-checkbox-item">
           <input type="checkbox" class="modal-model-checkbox" value="${m}" ${isChecked}>
@@ -1969,13 +2474,90 @@ async function saveModelSelection() {
   }
 }
 
+async function checkFreeModelChanges() {
+  if (!currentManagingProvider) return;
+  const btn = document.getElementById('btnCheckFreeChanges');
+  const originalText = btn.innerText;
+  btn.innerText = '检查中...';
+  btn.disabled = true;
+
+  try {
+    // 1. 获取当前 provider 配置
+    const rProviders = await apiFetch('/api/providers');
+    const pList = await rProviders.json();
+    const pData = pList.find(p => p.name === currentManagingProvider);
+    if (!pData) { alert('未找到提供商配置'); return; }
+
+    const currentModels = new Set(pData.models || []);
+    const freeOnly = pData.free_only || false;
+
+    // 2. 重新拉取上游可用模型列表
+    const rAvailable = await apiFetch(`/api/providers/${currentManagingProvider}/available-models`);
+    const availableData = await rAvailable.json();
+    if (!availableData.ok) throw new Error("API返回错误");
+
+    const rawModels = availableData.models || [];
+    const allModels = rawModels.map(m => typeof m === 'string' ? m : (m.id || m.model || '')).filter(Boolean);
+
+    // 3. 构建当前免费模型集合（上游最新数据）
+    const currentFreeSet = new Set();
+    if (freeOnly) {
+      rawModels.forEach(m => {
+        if (typeof m === 'object' && m.is_free) {
+          currentFreeSet.add(m.id || m.model);
+        }
+      });
+    }
+
+    // 4. 找出需要踢掉的模型：已选中但不再是免费的
+    let removed = [];
+    if (freeOnly) {
+      removed = allModels.filter(m => currentModels.has(m) && !currentFreeSet.has(m));
+    }
+
+    // 5. 更新前端 checkbox 状态
+    const checkboxes = document.querySelectorAll('#modalModelList .modal-model-checkbox');
+    checkboxes.forEach(cb => {
+      if (removed.includes(cb.value)) {
+        cb.checked = false;
+      }
+    });
+
+    // 6. 自动保存到后端
+    if (removed.length > 0) {
+      const newSelected = [];
+      document.querySelectorAll('.modal-model-checkbox').forEach(cb => { if (cb.checked) newSelected.push(cb.value); });
+      const res = await apiFetch(`/api/providers/${currentManagingProvider}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ models: newSelected })
+      });
+      if (!res.ok) throw new Error("保存失败");
+      alert(`已移除 ${removed.length} 个不再免费的模型：\n${removed.join('\n')}`);
+    } else {
+      alert('免费模型���表未发生变化');
+    }
+
+    // 7. 刷新主界面
+    load();
+    checkAll();
+  } catch (e) {
+    if (e.message !== 'Unauthorized') { console.error(e); alert("检查失败：" + e.message); }
+  } finally {
+    btn.innerText = originalText;
+    btn.disabled = false;
+  }
+}
+
 /* ============ 提供商增删改 ============ */
 let providerEditMode = 'add';
 let providerEditName = null;
+let editingProviderData = null; // 编辑模式下缓存的 provider 原始数据（含 no_auth/auth_optional）
 
 async function openProviderEditor(name) {
   providerEditMode = name ? 'edit' : 'add';
   providerEditName = name || null;
+  marketSelected = null; // 手动打开时清空市场预填状态（marketAdd 会在本函数返回后再赋值）
   const titleEl = document.getElementById('providerModalTitle');
   const saveBtn = document.getElementById('providerSaveBtn');
   const nameInput = document.getElementById('pf_name');
@@ -1998,11 +2580,26 @@ async function openProviderEditor(name) {
       const r = await apiFetch('/api/providers');
       const list = await r.json();
       const p = list.find(x => x.name === name) || {};
+      editingProviderData = p;
       document.getElementById('pf_base_url').value = p.base_url || '';
+      document.getElementById('pf_auth_header').value = p.auth_header || '';
+      document.getElementById('pf_auth_scheme').value = p.auth_scheme || '';
+      document.getElementById('pf_format').value = p.format || 'openai';
+      document.getElementById('pf_thinking_budget').value = p.thinking_budget || 0;
+      document.getElementById('pf_free_only').checked = p.free_only === true || p.free_only === '1' || p.free_only === 1;
+      document.getElementById('pf_anonymous_api_key').value = p.anonymous_api_key || '';
+      // 编辑模式：始终显示密钥框（免Key 提供者允许留空，但保留填入入口——
+      // 部分标称免Key的提供者如 Hackclub 实际仍需密钥，用户可在此补填）。
+      //   - auth: "none" / no_auth=true → 免 Key，显示密钥框但允许留空
+      //   - auth: "optional" → 可选 Key，显示密钥框（用户可填以提升限额）
+      //   - auth: "apikey" → 必须 Key，显示密钥框
+      const keyField = document.getElementById('pf_api_key_field');
+      if (keyField) keyField.style.display = '';
     } catch (e) { if (e.message !== 'Unauthorized') console.error(e); }
     document.getElementById('pf_api_key').value = '';
     document.getElementById('pf_api_key').placeholder = '留空表示不修改密钥';
   } else {
+    editingProviderData = null; // 添加模式：清空编辑缓存
     titleEl.innerText = '添加提供商';
     saveBtn.innerText = '保存并拉取模型';
     hintEl.innerText = '保存后将自动从上游拉取可用模型列表';
@@ -2012,6 +2609,15 @@ async function openProviderEditor(name) {
     document.getElementById('pf_base_url').value = '';
     document.getElementById('pf_api_key').value = '';
     document.getElementById('pf_api_key').placeholder = 'sk-...';
+    document.getElementById('pf_auth_header').value = '';
+    document.getElementById('pf_auth_scheme').value = '';
+    document.getElementById('pf_format').value = 'openai';
+    document.getElementById('pf_thinking_budget').value = 0;
+    document.getElementById('pf_free_only').checked = true;
+    document.getElementById('pf_anonymous_api_key').value = '';
+    // 手动添加模式：默认显示密钥框（用户可能添加任意提供者）
+    const keyField = document.getElementById('pf_api_key_field');
+    if (keyField) keyField.style.display = '';
   }
   document.getElementById('pf_show_key').checked = false;
   document.getElementById('pf_api_key').type = 'password';
@@ -2027,7 +2633,7 @@ async function openOutputModelsModal() {
   document.getElementById('outputModelsModal').classList.add('show');
   document.getElementById('outputModelList').innerHTML = '<div class="empty">获取中...</div>';
   try {
-    if (!_adminKey) await fetchLocalInfo();
+    if (!_adminKey) { const ok = await fetchLocalInfo(); if (!ok) { showGate(); return; } }
     const res = await apiFetch('/v1/models');
     if (!res.ok) throw new Error('Failed to fetch models');
     const data = await res.json();
@@ -2056,18 +2662,44 @@ async function openOutputModelsModal() {
 function showProviderMsg(msg, type) {
   const el = document.getElementById('providerModalMsg');
   const color = type === 'error' ? 'var(--danger)' : 'var(--success)';
-  el.innerHTML = '<span style="color:' + color + '">' + msg + '</span>';
+  el.innerHTML = '<span style="color:' + color + '">' + escapeHtml(msg) + '</span>';
   el.style.display = 'block';
 }
 
+function markInvalid(id) {
+  const el = document.getElementById(id);
+  if (!el) return;
+  el.style.borderColor = 'var(--danger)';
+  el.addEventListener('input', function () { el.style.borderColor = ''; }, { once: true });
+}
 async function submitProviderForm() {
   const name = document.getElementById('pf_name').value.trim();
   const baseUrl = document.getElementById('pf_base_url').value.trim();
   const apiKey = document.getElementById('pf_api_key').value;
-  const freeOnly = true;
+  const authHeader = document.getElementById('pf_auth_header').value.trim();
+  const authScheme = document.getElementById('pf_auth_scheme').value.trim();
+  const pfFormat = (document.getElementById('pf_format').value || 'openai').trim();
+  const thinkingBudget = parseInt(document.getElementById('pf_thinking_budget').value || '0', 10) || 0;
+  const anonymousApiKey = document.getElementById('pf_anonymous_api_key').value.trim();
+  // F2 修复：新增提供商默认全选（free_only=false），付费模型不再被漏选；
+  // 预设流程在后端显式传 true 时才只选免费模型。
+  // 提供者面板新增"自动选择免费模型"勾选框，默认勾选，从市场添加时保留勾选状态。
+  const freeOnly = document.getElementById('pf_free_only').checked;
+  // 免 Key 提供者标记：从市场添加时由 marketSelected.auth 决定；手动添加时由匿名 key 或 auth_scheme 推断
+  // auth=none → no_auth=true（ApplyAuth 不注入用户 key，仅注入 anonymous key）
+  // auth=optional → auth_optional=true（首次注入 key，401 时自动去 auth 重试，让免费模型可用）
+  // 编辑模式：保留原有 no_auth/auth_optional 标记，避免保存时丢失
+  const noAuth = marketSelected ? marketSelected.auth === 'none' : (providerEditMode === 'edit' ? (editingProviderData && editingProviderData.no_auth) : (!apiKey && (authScheme === 'none' || anonymousApiKey)));
+  const authOptional = marketSelected ? marketSelected.auth === 'optional' : (providerEditMode === 'edit' ? (editingProviderData && editingProviderData.auth_optional) : false);
 
-  if (!name || !baseUrl) { showProviderMsg('名称和 Base URL 不能为空', 'error'); return; }
-  if (providerEditMode === 'add' && !apiKey) { showProviderMsg('添加时必须填写 API Key', 'error'); return; }
+  if (!name || !baseUrl) {
+    if (!name) markInvalid('pf_name');
+    if (!baseUrl) markInvalid('pf_base_url');
+    showProviderMsg('名称和 Base URL 不能为空', 'error'); return;
+  }
+  // 免 Key 提供者（市场目录 auth=none/optional）允许留空密钥
+  const keylessOk = marketSelected && marketSelected.auth !== 'apikey';
+  if (providerEditMode === 'add' && !apiKey && !keylessOk) { showProviderMsg('添加时必须填写 API Key', 'error'); return; }
   if (!/^[\u4e00-\u9fa5a-zA-Z0-9_.\-]+$/.test(name)) {
     showProviderMsg('名称只能包含中文、字母、数字、横杠(-)、下划线(_)、点(.)，不能含斜杠/空格等特殊字符', 'error');
     return;
@@ -2081,14 +2713,29 @@ async function submitProviderForm() {
   try {
     let res;
     if (providerEditMode === 'add') {
+      const payload = { name, base_url: baseUrl, api_key: apiKey, free_only: freeOnly, no_auth: noAuth, auth_optional: authOptional };
+      if (authHeader) payload.auth_header = authHeader;
+      if (authScheme) payload.auth_scheme = authScheme;
+      if (anonymousApiKey) payload.anonymous_api_key = anonymousApiKey;
+      if (pfFormat && pfFormat !== 'openai') payload.format = pfFormat;
+      if (thinkingBudget > 0) payload.thinking_budget = thinkingBudget;
+      // 密钥留空时后端无法自动拉取上游模型列表，改用市场目录内置的模型清单兜底
+      if (!apiKey && marketSelected && (marketSelected.models || []).length > 0) {
+        payload.models = marketSelected.models.map(m => m.id);
+      }
       res = await apiFetch('/api/providers', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name, base_url: baseUrl, api_key: apiKey, free_only: freeOnly })
+        body: JSON.stringify(payload)
       });
     } else {
-      const body = { base_url: baseUrl, free_only: freeOnly };
+      const body = { base_url: baseUrl, free_only: freeOnly, no_auth: noAuth, auth_optional: authOptional };
       if (apiKey) body.api_key = apiKey;
+      body.auth_header = authHeader;   // 空字符串表示恢复默认（Authorization: Bearer）
+      body.auth_scheme = authScheme;
+      if (anonymousApiKey) body.anonymous_api_key = anonymousApiKey;
+      body.format = pfFormat;
+      if (thinkingBudget > 0) body.thinking_budget = thinkingBudget;
       res = await apiFetch('/api/providers/' + encodeURIComponent(providerEditName), {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
@@ -2260,6 +2907,10 @@ async function loadCostDashboard() {
     renderCostTable('costByModel', d.by_model, 'model');
     renderCostTable('costByDay', d.by_day, 'date');
   } catch (e) {
+    if (e.message !== 'Unauthorized') {
+      const box = document.getElementById('costOverview');
+      if (box) box.innerHTML = '<div class="empty" style="color:var(--danger)">成本统计加载失败：' + escapeHtml(e.message) + ' <button class="btn" style="font-size:12px;padding:2px 8px;" onclick="loadCostDashboard()">重试</button></div>';
+    }
     showToast('成本统计加载失败：' + e.message, 'error');
   }
 }
@@ -2422,33 +3073,6 @@ function renderAliasList() {
     `<datalist id="aliasTargetList">${uniq.map(t => `<option value="${escapeHtml(t)}">`).join('')}</datalist>`;
 }
 
-async function toggleAliasPreset() {
-  const hasPreset = aliasesData.some(a => a.name === 'fast' && a.target === 'auto');
-  if (hasPreset) {
-    aliasesData = aliasesData.filter(a => !(a.name === 'fast' && a.target === 'auto'));
-  } else {
-    aliasesData.push({ name: 'fast', target: 'auto' });
-  }
-  // 自动保存
-  const cleaned = aliasesData.filter(a => a.name.trim() && a.target.trim() && a.name.trim() !== a.target.trim());
-  try {
-    await apiFetch('/api/aliases', { method: 'POST', body: JSON.stringify(cleaned) });
-    aliasesData = cleaned;
-    renderAliasList();
-    showToast(hasPreset ? '已关闭 fast → auto 预设' : '已启用 fast → auto 预设', 'ok');
-  } catch (e) {
-    showToast('保存预设失败：' + e.message, 'error');
-  }
-  // 更新按钮状态
-  const presetOn = aliasesData.some(a => a.name === 'fast' && a.target === 'auto');
-  const btn = document.getElementById('aliasPresetFastBtn');
-  if (btn) {
-    btn.textContent = presetOn ? '✅ 已启用 fast → auto 预设（点击关闭）' : '⚡ 启用 fast → auto 预设';
-    btn.style.background = presetOn ? 'var(--success)' : '';
-    btn.style.color = presetOn ? '#fff' : '';
-  }
-}
-
 function addAliasRow() {
   aliasesData.push({ name: '', target: '' });
   renderAliasList();
@@ -2468,6 +3092,25 @@ async function saveAliases() {
 
 function escapeHtml(s) {
   return String(s == null ? '' : s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+// escJsStr：用于把动态值安全地嵌入单引号 JS 字符串（如 onclick="fn('...')"）。
+// 在 escapeHtml 基础上额外转义单引号与反斜杠，防止单引号注入导致的属性/脚本逃逸。
+function escJsStr(s) {
+  return String(s == null ? '' : s)
+    .replace(/\\/g, '\\\\')
+    .replace(/'/g, "\\'")
+    .replace(/"/g, '&quot;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/&/g, '&amp;');
+}
+
+// safeHref：仅允许 http/https/mailto/相对路径，阻断 javascript:/data: 等危险协议，防止 Markdown 链接 XSS。
+function safeHref(url) {
+  const u = String(url == null ? '' : url).trim();
+  if (/^(https?:|mailto:|\/|#)/i.test(u)) return u;
+  return '#';
 }
 
 /* ============ 网关设置（缓存 / 预算 / 并发 / 钩子） ============ */
@@ -2490,6 +3133,9 @@ async function openGatewaySettings() {
     document.getElementById('gwBudgetWarnPct').value = b.warning_pct || 80;
     document.getElementById('gwMaxConcurrency').value = gs.max_concurrency || 0;
     document.getElementById('gwStrictCap').checked = !!gs.strict_capability;
+    document.getElementById('gwSsrfStrict').checked = !!gs.ssrf_strict;
+    document.getElementById('gwAllowClients').value = (gs.allow_clients || []).join('\n');
+    document.getElementById('gwBannedProviders').value = (gs.banned_providers || []).join('\n');
     hooksData = hk.data || [];
   } catch (e) {
     if (e.message !== 'Unauthorized') showToast('加载网关设置失败：' + e.message, 'error');
@@ -2536,6 +3182,10 @@ function renderHookList() {
       <div style="display:flex; gap:14px; align-items:center; font-size:12.5px; flex-wrap:wrap;">
         <label><input type="checkbox" ${evs.includes('request_done') ? 'checked' : ''} onchange="toggleHookEvent(${i},'request_done',this.checked)"> 成功事件</label>
         <label><input type="checkbox" ${evs.includes('request_failed') ? 'checked' : ''} onchange="toggleHookEvent(${i},'request_failed',this.checked)"> 失败事件</label>
+        <label><input type="checkbox" ${evs.includes('provider_down') ? 'checked' : ''} onchange="toggleHookEvent(${i},'provider_down',this.checked)"> 提供商下线</label>
+        <label><input type="checkbox" ${evs.includes('provider_up') ? 'checked' : ''} onchange="toggleHookEvent(${i},'provider_up',this.checked)"> 提供商恢复</label>
+        <label><input type="checkbox" ${evs.includes('quota_exceeded') ? 'checked' : ''} onchange="toggleHookEvent(${i},'quota_exceeded',this.checked)"> 配额耗尽</label>
+        <label><input type="checkbox" ${evs.includes('circuit_open') ? 'checked' : ''} onchange="toggleHookEvent(${i},'circuit_open',this.checked)"> 熔断开启</label>
         <input type="text" value="${escapeHtml(h.secret || '')}" placeholder="签名密钥（可选）" oninput="hooksData[${i}].secret=this.value"
           style="flex:1; min-width:140px; padding:4px 8px; border:1px solid var(--mac-border); border-radius:6px; background:transparent; color:var(--text-primary); font-size:12px;">
       </div>
@@ -2564,7 +3214,10 @@ async function saveGatewaySettings() {
     budget_action: document.getElementById('gwBudgetAction').value,
     budget_warning_pct: parseInt(document.getElementById('gwBudgetWarnPct').value) || 80,
     max_concurrency: parseInt(document.getElementById('gwMaxConcurrency').value) || 0,
-    strict_capability: document.getElementById('gwStrictCap').checked
+    strict_capability: document.getElementById('gwStrictCap').checked,
+    ssrf_strict: document.getElementById('gwSsrfStrict').checked,
+    allow_clients: document.getElementById('gwAllowClients').value,
+    banned_providers: document.getElementById('gwBannedProviders').value
   };
   const cleanedHooks = hooksData.filter(h => h.url && h.url.trim());
   try {
@@ -2626,7 +3279,7 @@ async function loadVKeys() {
           <div style="display:flex; align-items:center; gap:8px;">
             <b style="font-size:13px;">${escapeHtml(vk.name || '(未命名)')}</b>
             <code style="font-size:11px; color:var(--text-secondary);">${escapeHtml(vk.key)}</code>
-            <button class="btn" style="padding:2px 8px;font-size:11px;" onclick="copyVKey('${escapeHtml(vk.id)}', this)" title="复制完整密钥">📋</button>
+            <button class="btn" style="padding:2px 8px;font-size:11px;" onclick="copyVKey('${escJsStr(vk.id)}', this)" title="复制完整密钥">📋</button>
             ${vk.enabled ? '' : '<span style="font-size:11px; color:var(--danger);">已禁用</span>'}
           </div>
           <div style="font-size:11.5px; color:var(--text-secondary); margin-top:3px; line-height:1.5;">
@@ -2634,10 +3287,10 @@ async function loadVKeys() {
             ${vk.notes ? ' · 备注：' + escapeHtml(vk.notes) : ''}
           </div>
         </div>
-        <label class="hf-toggle" title="启用/禁用该密钥" style="margin:0 8px;">
-          <input type="checkbox" ${vk.enabled ? 'checked' : ''} onchange="toggleVKey('${escapeHtml(vk.id)}', this.checked)"><span class="hf-switch"></span>
+          <label class="hf-toggle" title="启用/禁用该密钥" style="margin:0 8px;">
+          <input type="checkbox" ${vk.enabled ? 'checked' : ''} onchange="toggleVKey('${escJsStr(vk.id)}', this.checked)"><span class="hf-switch"></span>
         </label>
-        <button class="rg-rm" title="删除" onclick="deleteVKey('${escapeHtml(vk.id)}')">×</button>
+        <button class="rg-rm" title="删除" onclick="deleteVKey('${escJsStr(vk.id)}')">×</button>
       </div>`;
     }).join('');
   } catch (e) {
@@ -2769,14 +3422,14 @@ async function openVisionConfig() {
     opts.sort((a, b) => (_visionModelSet.has(b.model) ? 1 : 0) - (_visionModelSet.has(a.model) ? 1 : 0));
     list.innerHTML = opts.map(opt => {
       const checked = selected.has(opt.model) ? 'checked' : '';
-      return `<label class="model-checkbox-item">
-        <input type="checkbox" class="vision-cb" value="${opt.model}" ${checked}>
-        <div class="model-checkbox-label"><span class="model-provider-badge">${opt.provider}</span>${opt.model}</div>
+      return `      <label class="model-checkbox-item">
+        <input type="checkbox" class="vision-cb" value="${escapeHtml(opt.model)}" ${checked}>
+        <div class="model-checkbox-label"><span class="model-provider-badge">${escapeHtml(opt.provider)}</span>${escapeHtml(opt.model)}</div>
       </label>`;
     }).join('');
     document.getElementById('visionCount').textContent = '已选 ' + selected.size + ' · 共 ' + opts.length + ' 个模型';
   } catch (e) {
-    list.innerHTML = '<div class="empty" style="color:var(--danger)">加载失败：' + e.message + '</div>';
+    list.innerHTML = '<div class="empty" style="color:var(--danger)">加载失败：' + escapeHtml(e.message) + '</div>';
   }
 }
 
@@ -3000,6 +3653,160 @@ document.addEventListener('click', function(e) {
   }
 });
 
+/* ============ 提供者市场 ============ */
+let marketData = null;      // /api/provider-market 返回的目录（随包只读）
+let marketSelected = null;  // 从市场点「添加」时选中的提供��（用于预填与免 Key 放行）
+let addedProviderIds = null; // 已添加的提供者名称集合（用于「隐藏已添加」过滤）
+
+async function openMarketModal() {
+  document.getElementById('marketModal').classList.add('show');
+  if (!marketData) {
+    try {
+      const res = await apiFetch('/api/provider-market');
+      if (!res.ok) throw new Error('http ' + res.status);
+      marketData = await res.json();
+    } catch (e) {
+      if (e.message === 'Unauthorized') return;
+      document.getElementById('marketList').innerHTML = '<div class="empty" style="color:var(--danger)">加载市场目录失败，请稍后重试</div>';
+      return;
+    }
+  }
+  // 预加载已添加提供者列表（用于「隐藏已添加」过滤）
+  // 每次都重新加载，确保添加/删除后缓存最新
+  try {
+    const r = await apiFetch('/api/providers');
+    if (r.ok) {
+      const list = await r.json();
+      addedProviderIds = new Set((list || []).map(p => (p.name || p.id || '').toLowerCase()).filter(Boolean));
+    } else {
+      addedProviderIds = new Set();
+    }
+  } catch (e) {
+    addedProviderIds = new Set();
+  }
+  renderMarket();
+}
+
+function closeMarketModal() {
+  document.getElementById('marketModal').classList.remove('show');
+}
+
+function fmtTokens(n) {
+  if (!n || n <= 0) return '0';
+  if (n >= 1e9) return (n / 1e9).toFixed(n % 1e9 === 0 ? 0 : 1) + 'B';
+  if (n >= 1e6) return (n / 1e6).toFixed(n % 1e6 === 0 ? 0 : 1) + 'M';
+  if (n >= 1e3) return (n / 1e3).toFixed(n % 1e3 === 0 ? 0 : 1) + 'K';
+  return '' + n;
+}
+
+// 免Key提供者实测状态样式（数据来自 providers_catalog.json 的 keyfree_status，2026-07-31 逐一探测）
+const KEYFREE_STATUS_META = {
+  verified:     { label: '✅ 实测可用',   bg: 'rgba(52,199,89,.18)',  fg: 'var(--success)' },
+  adapter:      { label: '🔌 已内置适配', bg: 'rgba(0,122,255,.15)',  fg: 'var(--accent)'  },
+  rate_limited: { label: '⚠ 上游限流',    bg: 'rgba(255,149,0,.18)',  fg: 'var(--warning)' },
+  needs_key:    { label: '🔑 实为需密钥', bg: 'rgba(255,149,0,.18)',  fg: 'var(--warning)' },
+  incompatible: { label: '⛔ 架构不兼容',  bg: 'rgba(255,59,48,.15)',  fg: 'var(--danger)'  }
+};
+
+function renderMarket() {
+  if (!marketData) return;
+  const kw = (document.getElementById('marketSearch').value || '').trim().toLowerCase();
+  const freeOnly = document.getElementById('marketFreeOnly').checked;
+  const keylessOnly = document.getElementById('marketKeylessOnly').checked;
+  const hideAdded = document.getElementById('marketHideAdded').checked;
+  const all = marketData.providers || [];
+  const list = all.filter(p => {
+    if (freeOnly && !(p.free_models > 0)) return false;
+    if (keylessOnly && p.auth === 'apikey') return false;
+    if (hideAdded && addedProviderIds && addedProviderIds.has(p.id)) return false;
+    if (!kw) return true;
+    if (p.id.toLowerCase().includes(kw) || (p.name || '').toLowerCase().includes(kw) || (p.base_url || '').toLowerCase().includes(kw)) return true;
+    return (p.models || []).some(m => m.id.toLowerCase().includes(kw) || (m.name || '').toLowerCase().includes(kw));
+  });
+  // 勾选「只看免Key」时，按实测状态排序：实测可用 > 已内置适配 > 限流 > 未探测 > 架构不兼容
+  if (keylessOnly) {
+    const rank = { verified: 0, adapter: 1, rate_limited: 2, needs_key: 4, incompatible: 5 };
+    list.sort((a, b) => (rank[a.keyfree_status] ?? 2) - (rank[b.keyfree_status] ?? 2));
+  }
+  const totalFree = all.reduce((s, p) => s + (p.free_models || 0), 0);
+  const totalModels = all.reduce((s, p) => s + ((p.models || []).length), 0);
+  const totalQuota = all.reduce((s, p) => s + (p.monthly_tokens || 0), 0);
+  const hiddenCount = hideAdded && addedProviderIds ? all.filter(p => addedProviderIds.has(p.id)).length : 0;
+  document.getElementById('marketStats').innerText =
+    '共 ' + all.length + ' 个提供者 / ' + totalModels + ' 个已收录模型 / ' + totalFree + ' 个免费模型' +
+    (totalQuota > 0 ? (' / 🎁 免费额度 ' + fmtTokens(totalQuota) + '/月') : '') +
+    (hiddenCount > 0 ? (' / 已隐藏 ' + hiddenCount + ' 个已添加') : '') +
+    (kw || freeOnly || keylessOnly || hideAdded ? ('，当前筛选出 ' + list.length + ' 个') : '');
+  if (list.length === 0) {
+    document.getElementById('marketList').innerHTML = '<div class="empty">没有匹配的提供者</div>';
+    return;
+  }
+  let html = '';
+  list.forEach(p => {
+    const badges = [];
+    if (p.free_models > 0) badges.push('<span style="font-size:11px; padding:1px 6px; border-radius:8px; background:rgba(52,199,89,.15); color:var(--success);">免费 ' + p.free_models + '</span>');
+    if (p.auth !== 'apikey') badges.push('<span style="font-size:11px; padding:1px 6px; border-radius:8px; background:rgba(0,122,255,.12); color:var(--accent);">免 Key</span>');
+    if (p.monthly_tokens > 0) badges.push('<span style="font-size:11px; padding:1px 6px; border-radius:8px; background:rgba(255,149,0,.15); color:var(--warning);">🎁 ' + fmtTokens(p.monthly_tokens) + '/月</span>');
+    if (p.tos === 'avoid') badges.push('<span style="font-size:11px; padding:1px 6px; border-radius:8px; background:rgba(255,59,48,.15); color:var(--danger);">⚠ ToS 限制</span>');
+    // 2026-07-31 逐一实测标注：让用户在添加前就知道该「免Key」提供者是否真能用
+    const st = KEYFREE_STATUS_META[p.keyfree_status];
+    if (st) badges.push('<span style="font-size:11px; padding:1px 6px; border-radius:8px; background:' + st.bg + '; color:' + st.fg + ';">' + st.label + '</span>');
+    const mc = (p.models || []).length;
+    const sub = escapeHtml(p.base_url) + (mc > 0 ? (' · 收录 ' + mc + ' 个模型') : ' · 添加后自动拉取模型');
+    const note = p.keyfree_note ? escapeHtml(p.keyfree_note) : '';
+    const unusable = p.keyfree_status === 'incompatible';
+    html += `
+    <div title="${note}" style="display:flex; align-items:center; gap:10px; padding:10px 12px; background:var(--mac-window-bg); border:1px solid var(--mac-border); border-radius:8px;${unusable ? ' opacity:.62;' : ''}">
+      <div style="flex:1; min-width:0;">
+        <div style="font-weight:600; font-size:13px; display:flex; align-items:center; gap:6px; flex-wrap:wrap;">${escapeHtml(p.name || p.id)} ${badges.join(' ')}</div>
+        <div style="font-size:11px; color:var(--text-secondary); overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">${sub}</div>
+        ${note ? `<div style="font-size:11px; color:var(--text-secondary); margin-top:3px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">💡 ${note}</div>` : ''}
+      </div>
+      <button class="btn ${unusable ? 'btn-secondary' : 'btn-primary'}" style="padding:5px 12px; font-size:12px; flex-shrink:0;" onclick="marketAdd('${escJsStr(p.id)}')">${unusable ? '仍要添加' : '添加'}</button>
+    </div>`;
+  });
+  document.getElementById('marketList').innerHTML = html;
+}
+
+async function marketAdd(pid) {
+  const p = ((marketData && marketData.providers) || []).find(x => x.id === pid);
+  if (!p) return;
+  closeMarketModal();
+  await openProviderEditor();  // add 模式（内部会清空 marketSelected，故在其后再赋值）
+  marketSelected = p;
+  document.getElementById('pf_name').value = p.id;
+  document.getElementById('pf_base_url').value = p.base_url;
+  document.getElementById('pf_auth_header').value = p.auth_header || '';
+  document.getElementById('pf_auth_header').value = p.auth_header || '';
+  document.getElementById('pf_auth_scheme').value = p.auth_scheme || (p.auth !== 'apikey' ? 'none' : '');
+  document.getElementById('pf_format').value = p.format || 'openai';
+  const keyInput = document.getElementById('pf_api_key');
+  const keyField = document.getElementById('pf_api_key_field');
+  if (p.auth === 'none' || p.auth === 'optional') {
+    // 免 Key / 可选 Key 提供者：显示密钥框但允许留空。
+    // 注意：部分标称免Key的提供者（如 Hackclub）实际仍需密钥，
+    // 因此保留填入入口；若连接失败提示需鉴权，再补填即可。
+    if (keyField) keyField.style.display = '';
+    keyInput.placeholder = '可留空（免Key）；若连接失败提示需鉴权，请在此填入密钥';
+  } else {
+    if (keyField) keyField.style.display = '';
+    keyInput.placeholder = 'sk-...';
+  }
+  // 从市场添加时，若该提供者有免费模型则默认勾选"自动选择免费模型"；纯付费提供者则取消勾选
+  document.getElementById('pf_free_only').checked = (p.free_models || 0) > 0;
+  const hints = [];
+  if (p.free_models > 0) hints.push('含 ' + p.free_models + ' 个免费模型');
+  if ((p.models || []).length > 0) hints.push('目录已收录 ' + p.models.length + ' 个模型');
+  if (p.auth_header) hints.push('鉴权头: ' + p.auth_header + (p.auth_scheme ? (' (' + p.auth_scheme + ')') : ''));
+  const hintEl = document.getElementById('providerModalHint');
+  hintEl.innerText = hints.join('，');
+  // 附上 2026-07-31 实测结论，说明该提供者到底能不能免Key、不能的原因是什么
+  if (p.keyfree_note) {
+    const meta = KEYFREE_STATUS_META[p.keyfree_status];
+    hintEl.innerText += (hints.length ? '\n' : '') + (meta ? meta.label + ' ' : '') + p.keyfree_note;
+  }
+}
+
 /* ============ 预设一键配置 ============ */
 let _presetData = null;
 let _presetKeyStatus = {};
@@ -3027,7 +3834,7 @@ async function openPresetModal() {
     document.getElementById('presetVersionHint').textContent = '预设版本 ' + (r.version || '');
     renderPresetCards(r);
   } catch (e) {
-    body.innerHTML = '<div style="text-align:center; padding:32px; color:var(--danger);">加载预设失败：' + (e.message||'') + '</div>';
+    body.innerHTML = '<div style="text-align:center; padding:32px; color:var(--danger);">加载预设失败：' + escapeHtml(e.message||'') + '</div>';
   }
 }
 
@@ -3039,19 +3846,19 @@ function renderPresetCards(preset) {
   html += '<div class="preset-cards">';
   for (const [name, cfg] of Object.entries(preset.platforms)) {
     const hasExisting = existingNames.has(name);
-    const badge = hasExisting ? '<span class="preset-card-badge" style="color:var(--success);">已有配置</span>' : '<span class="preset-card-badge">' + (cfg.auth_hint || '无需认证') + '</span>';
-    const placeholder = hasExisting ? '留空保留原配置，或填入新 Key 覆盖' : '填入 ' + name + ' 的 API Key';
+    const badge = hasExisting ? '<span class="preset-card-badge" style="color:var(--success);">已有配置</span>' : '<span class="preset-card-badge">' + escapeHtml(cfg.auth_hint || '无需认证') + '</span>';
+    const placeholder = hasExisting ? '留空保留原配置，或填入新 Key 覆盖' : '填入 ' + escAttr(name) + ' 的 API Key';
     html += '<div class="preset-card">';
     html += '<div class="preset-card-head">';
-    html += '<span class="preset-card-name">' + name + '</span>';
+    html += '<span class="preset-card-name">' + escapeHtml(name) + '</span>';
     html += badge;
     html += '</div>';
     html += '<div class="preset-card-row">';
-    html += '<input type="password" class="preset-key-input" id="preset_key_' + name + '" placeholder="' + placeholder + '" oninput="resetPresetKeyStatus(\'' + name + '\')">';
-    html += '<button class="btn" style="padding:4px 10px;font-size:12px;" onclick="verifyPresetKey(\'' + name + '\')">测试</button>';
-    html += '<button class="btn" style="padding:4px 10px;font-size:12px;" onclick="openPresetKeyPage(\'' + name + '\')">官网</button>';
+    html += '<input type="password" class="preset-key-input" id="preset_key_' + escAttr(name) + '" placeholder="' + placeholder + '" oninput="resetPresetKeyStatus(\'' + escJsStr(name) + '\')">';
+    html += '<button class="btn" style="padding:4px 10px;font-size:12px;" onclick="verifyPresetKey(\'' + escJsStr(name) + '\')">测试</button>';
+    html += '<button class="btn" style="padding:4px 10px;font-size:12px;" onclick="openPresetKeyPage(\'' + escJsStr(name) + '\')">官网</button>';
     html += '</div>';
-    html += '<div class="preset-card-status" id="preset_status_' + name + '"></div>';
+    html += '<div class="preset-card-status" id="preset_status_' + escAttr(name) + '"></div>';
     html += '</div>';
   }
   html += '</div>';
@@ -3077,11 +3884,11 @@ async function verifyPresetKey(name) {
   try {
     const r = await (await apiFetch('/api/providers/verify-key', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ base_url: cfg.base_url, api_key: key }) })).json();
     _presetKeyStatus[name] = r;
-    if (r && r.ok) stEl.innerHTML = '<span style="color:var(--success);">✓ ' + (r.detail||'连接成功') + '</span>';
-    else stEl.innerHTML = '<span style="color:var(--danger);">✗ ' + (r && r.detail || '校验失败') + '</span>';
+    if (r && r.ok) stEl.innerHTML = '<span style="color:var(--success);">✓ ' + escapeHtml(r.detail||'连接成功') + '</span>';
+    else stEl.innerHTML = '<span style="color:var(--danger);">✗ ' + escapeHtml(r && r.detail || '校验失败') + '</span>';
   } catch (e) {
     _presetKeyStatus[name] = { ok:false, detail:e.message };
-    if (stEl) stEl.innerHTML = '<span style="color:var(--danger);">✗ ' + e.message + '</span>';
+    if (stEl) stEl.innerHTML = '<span style="color:var(--danger);">✗ ' + escapeHtml(e.message) + '</span>';
   }
   updatePresetApplyBtn();
 }
@@ -3183,10 +3990,10 @@ async function testProviderKey() {
   if (st) st.innerHTML = '<span style="color:var(--text-secondary);">校验中…</span>';
   try {
     const r = await (await apiFetch('/api/providers/verify-key', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ base_url, api_key }) })).json();
-    if (r && r.ok) st.innerHTML = '<span style="color:var(--success);">✓ ' + (r.detail||'连接成功') + '</span>';
-    else st.innerHTML = '<span style="color:var(--danger);">✗ ' + (r && r.detail || '校验失败') + '</span>';
+    if (r && r.ok) st.innerHTML = '<span style="color:var(--success);">✓ ' + escapeHtml(r.detail||'连接成功') + '</span>';
+    else st.innerHTML = '<span style="color:var(--danger);">✗ ' + escapeHtml(r && r.detail || '校验失败') + '</span>';
   } catch (e) {
-    if (st) st.innerHTML = '<span style="color:var(--danger);">✗ ' + e.message + '</span>';
+    if (st) st.innerHTML = '<span style="color:var(--danger);">✗ ' + escapeHtml(e.message) + '</span>';
   }
 }
 
@@ -3215,10 +4022,12 @@ function renderMarkdown(md) {
   html = html.replace(/^## (.*)$/gm, '<h2>$1</h2>');
   html = html.replace(/^# (.*)$/gm, '<h1>$1</h1>');
   html = html.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
-  html = html.replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" target="_blank">$1</a>');
+  html = html.replace(/\[([^\]]+)\]\(([^)]+)\)/g, (m, text, url) => {
+    return '<a href="' + safeHref(url) + '" target="_blank" rel="noopener noreferrer">' + text + '</a>';
+  });
   // 裸 URL 自动转链接（排除已被 href=" 包裹的，避免重复匹配）
   html = html.replace(/(^|[\s>])(https?:\/\/[^\s<"'）。，；！？、]+)(?=\s|$|<)/gm, (m, pre, url) => {
-    return pre + '<a href="' + url + '" target="_blank">' + url + '</a>';
+    return pre + '<a href="' + safeHref(url) + '" target="_blank" rel="noopener noreferrer">' + url + '</a>';
   });
   html = html.replace(/^---$/gm, '<hr>');
   html = html.replace(/^&gt; (.*)$/gm, '<blockquote>$1</blockquote>');
@@ -3240,7 +4049,7 @@ function renderMarkdown(md) {
       if (rows.length >= 2 && /^\|(\s*[-:]+[\s-|:]*\|)+$/.test(rows[1])) {
         const headerCells = rows[0].split('|').slice(1, -1).map(c => c.trim());
         const bodyRows = rows.slice(2).map(row => {
-          return '<tr>' + row.split('|').slice(1, -1).map(c => '<td>' + c.trim() + '</td>').join('') + '</tr>';
+          return '<tr>' + row.split('|').slice(1, -1).map(c => '<td>' + escapeHtml(c.trim()) + '</td>').join('') + '</tr>';
         });
         const headerHtml = '<thead><tr>' + headerCells.map(c => '<th>' + c + '</th>').join('') + '</tr></thead>';
         const bodyHtml = bodyRows.length ? '<tbody>' + bodyRows.join('') + '</tbody>' : '';
@@ -3308,7 +4117,7 @@ function renderAnnouncement(d) {
   const meta = document.getElementById('announcementMeta');
   if (meta) meta.style.display = 'none';
   if (!d || !d.ok) {
-    body.innerHTML = '<div class="empty">' + ((d && d.content) || '暂无公告') + '</div>';
+    body.innerHTML = '<div class="empty">' + escapeHtml((d && d.content) || '暂无公告') + '</div>';
     return;
   }
   body.innerHTML = renderMarkdown(d.content || '');
@@ -3420,7 +4229,7 @@ async function checkUpdate(silent) {
     const r = await apiFetch('/api/check-update');
     const d = await r.json();
     if (!d.ok || !d.has_update) {
-      if (!silent) { showToast('已是最新版本 v' + (d.current || '1.5.3'), 'ok'); }
+      if (!silent) { showToast('已是最新版本 v' + (d.current || '1.9.0'), 'ok'); }
       return;
     }
     _updateInfo = d;
@@ -3436,7 +4245,16 @@ async function checkUpdate(silent) {
     document.getElementById('updateDoBtn').textContent = '立即更新';
     document.getElementById('updateProgress').style.display = 'none';
     document.getElementById('updateError').style.display = 'none';
-    document.getElementById('updateActions').style.display = 'flex';
+    if (d.self_update === false) {
+      // F3 修复：本设备（OpenWrt/iStoreOS）不支持一键在线更新，
+      // 隐藏无效的“立即更新”按钮，改为给出经 iStore/opkg 手动升级的明确指引。
+      document.getElementById('updateActions').style.display = 'none';
+      const errEl = document.getElementById('updateError');
+      errEl.textContent = '本设备（OpenWrt/iStoreOS 软路由）不支持一键在线更新，请通过 iStore 应用商店或 opkg 升级到最新版本。';
+      errEl.style.display = 'block';
+    } else {
+      document.getElementById('updateActions').style.display = 'flex';
+    }
     document.getElementById('updateSkipBtn').style.display = d.force_update ? 'none' : '';
     document.getElementById('updateModal').classList.add('show');
   } catch (e) {
@@ -3515,18 +4333,24 @@ function closeUpdateModal() {
 }
 
 /* ============ 启动 ============ */
+/* P0 安全修复：/api/config 匿名请求只返回掩码，完整密钥必须带 Bearer 才下发。
+   启动时先用 localStorage 里记住的密钥自检；无密钥或密钥失效则弹密钥门。 */
 async function fetchLocalInfo() {
+  const saved = loadSavedToken();
+  if (!saved) return false;
   try {
-    const r = await fetch("/api/config");
+    const r = await fetch("/api/config", { headers: { 'Authorization': 'Bearer ' + saved } });
     const d = await r.json();
-    _adminKey = d.admin_key || "";
-    const keyEl = document.getElementById("localApiKey");
-    if (keyEl) keyEl.textContent = _adminKey || "";
-  } catch (e) {
-    _adminKey = "";
-    const keyEl = document.getElementById("localApiKey");
-    if (keyEl) keyEl.textContent = "无法获取";
-  }
+    if (d && d.admin_key === saved) {
+      _adminKey = saved;
+      fetchCsrf(); // P1-3：拉取 CSRF 令牌供后续写操作使用
+      const keyEl = document.getElementById("localApiKey");
+      if (keyEl) keyEl.textContent = saved;
+      return true;
+    }
+  } catch (e) {}
+  clearToken();
+  return false;
 }
 
 function startApp() {
@@ -3536,7 +4360,261 @@ function startApp() {
   setTimeout(function(){ checkUpdate(true); }, 2000);
   setTimeout(startAnnouncementWatcher, 5000);
 }
-fetchLocalInfo().then(() => startApp());
+switchMainTab('monitor');
+fetchLocalInfo().then(function (ok) {
+  if (ok) { window._appStarted = true; startApp(); }
+  else { showGate(); }
+});
+</script>
+
+<!-- ============ G3 轻量 Playground 调试台 ============ -->
+<div class="modal-overlay" id="playgroundModal" onclick="if(event.target===this) closePlayground()">
+  <div class="modal-content" style="max-width: 720px;">
+    <div class="modal-header">
+      <div class="modal-title">🧪 测试台（Playground）</div>
+      <div class="mac-btn close" onclick="closePlayground()" style="cursor: pointer;"></div>
+    </div>
+    <div class="modal-body">
+      <div style="display:flex; gap:12px; flex-wrap:wrap; margin-bottom:10px;">
+        <div style="flex:1; min-width:220px;">
+          <label style="font-size:12px; color:var(--text-secondary);">模型</label>
+          <select id="pg_model" style="width:100%;"></select>
+        </div>
+        <div style="flex:1; min-width:220px;">
+          <label style="font-size:12px; color:var(--text-secondary);">载入提示词模板（可选）</label>
+          <select id="pg_template" onchange="pgApplyTemplate()" style="width:100%;">
+            <option value="">— 不使用 —</option>
+          </select>
+        </div>
+      </div>
+      <div id="pg_vars" style="margin-bottom:10px;"></div>
+      <label style="font-size:12px; color:var(--text-secondary);">System Prompt（可选）</label>
+      <textarea id="pg_system" rows="3" placeholder="留空则不带 system 指令" style="width:100%; font-family:inherit;"></textarea>
+      <label style="font-size:12px; color:var(--text-secondary); margin-top:8px;">用户输入</label>
+      <textarea id="pg_user" rows="4" placeholder="在这里输入要发送的消息…" style="width:100%; font-family:inherit;"></textarea>
+      <div style="display:flex; gap:10px; margin-top:10px; align-items:center;">
+        <button class="btn btn-primary" id="pg_send" onclick="pgSend()">发送</button>
+        <button class="btn" id="pg_stop" onclick="pgStop()" disabled>停止</button>
+        <button class="btn" onclick="pgClear()">清空</button>
+        <span id="pg_status" style="font-size:12px; color:var(--text-secondary);"></span>
+      </div>
+      <label style="font-size:12px; color:var(--text-secondary); margin-top:12px;">输出</label>
+      <pre id="pg_output" style="white-space:pre-wrap; word-break:break-word; background:var(--bg-secondary); border-radius:8px; padding:12px; min-height:120px; max-height:360px; overflow:auto; font-family:inherit; font-size:13px; margin:0;"></pre>
+    </div>
+  </div>
+</div>
+
+<!-- ============ G4 提示词模板管理 ============ -->
+<div class="modal-overlay" id="templatesModal" onclick="if(event.target===this) closeTemplates()">
+  <div class="modal-content" style="max-width: 720px;">
+    <div class="modal-header">
+      <div class="modal-title">📝 提示词模板</div>
+      <div class="mac-btn close" onclick="closeTemplates()" style="cursor: pointer;"></div>
+    </div>
+    <div class="modal-body">
+      <div style="display:flex; gap:10px; margin-bottom:12px;">
+        <input type="text" id="tmpl_name" placeholder="模板名称" style="flex:1;">
+        <button class="btn btn-primary" onclick="tmplSave()">保存当前编辑</button>
+        <button class="btn" onclick="tmplNew()">新建</button>
+      </div>
+      <label style="font-size:12px; color:var(--text-secondary);">模板内容（使用 {{变量名}} 占位，可在测试台填值替换）</label>
+      <textarea id="tmpl_content" rows="6" placeholder="例如：你是一名严谨的中文翻译，请把下面的内容翻译成英文：{{text}}" style="width:100%; font-family:inherit;"></textarea>
+      <div id="tmpl_list" style="margin-top:14px;"></div>
+    </div>
+  </div>
+</div>
+
+<script>
+/* ============ G3 Playground ============ */
+let pgCtrl = null;
+
+async function openPlayground() {
+  document.getElementById('playgroundModal').classList.add('show');
+  await pgLoadModels();
+  await pgLoadTemplates();
+}
+function closePlayground() {
+  document.getElementById('playgroundModal').classList.remove('show');
+  if (pgCtrl) pgCtrl.abort();
+}
+async function pgLoadModels() {
+  const sel = document.getElementById('pg_model');
+  sel.innerHTML = '<option value="">— 选择模型 —</option>';
+  try {
+    const list = await (await apiFetch('/api/providers')).json();
+    const seen = {};
+    (list || []).forEach(p => (p.models || []).forEach(m => {
+      if (seen[m]) return; seen[m] = 1;
+      const o = document.createElement('option'); o.value = m; o.textContent = m; sel.appendChild(o);
+    }));
+  } catch (e) { if (e.message !== 'Unauthorized') console.error(e); }
+}
+async function pgLoadTemplates() {
+  const sel = document.getElementById('pg_template');
+  sel.innerHTML = '<option value="">— 不使用 —</option>';
+  try {
+    const list = await (await apiFetch('/api/templates')).json();
+    (list || []).forEach(t => {
+      const o = document.createElement('option'); o.value = t.id; o.textContent = t.name; sel.appendChild(o);
+    });
+  } catch (e) { if (e.message !== 'Unauthorized') console.error(e); }
+}
+async function pgApplyTemplate() {
+  const id = document.getElementById('pg_template').value;
+  const box = document.getElementById('pg_vars');
+  box.innerHTML = '';
+  if (!id) return;
+  try {
+    const list = await (await apiFetch('/api/templates')).json();
+    const t = (list || []).find(x => x.id === id);
+    if (!t) return;
+    document.getElementById('pg_system').value = t.content || '';
+    const vars = (t.content.match(/\{\{\s*([\w\u4e00-\u9fa5]+)\s*\}\}/g) || []).map(s => s.replace(/[{}]/g, '').trim());
+    const uniq = [...new Set(vars)];
+    uniq.forEach(v => {
+      const wrap = document.createElement('div'); wrap.style.marginBottom = '6px';
+      wrap.innerHTML = '<label style="font-size:12px;color:var(--text-secondary);">' + v + '</label>' +
+        '<input type="text" class="pg_var" data-var="' + v + '" style="width:100%;" placeholder="填入 ' + v + '">';
+      box.appendChild(wrap);
+    });
+    if (uniq.length) showToast('已载入模板，请在下方填入变量', 'ok');
+  } catch (e) { if (e.message !== 'Unauthorized') console.error(e); }
+}
+function pgSubstitute(text) {
+  const inputs = document.querySelectorAll('#pg_vars .pg_var');
+  inputs.forEach(inp => {
+    const v = inp.getAttribute('data-var');
+    const val = inp.value || '';
+    text = text.split('{{' + v + '}}').join(val).split('{{ ' + v + ' }}').join(val);
+  });
+  return text;
+}
+async function pgSend() {
+  const model = document.getElementById('pg_model').value;
+  let system = document.getElementById('pg_system').value;
+  const user = document.getElementById('pg_user').value;
+  if (!model || !user.trim()) { showToast('请选择模型并输入内容', 'error'); return; }
+  system = pgSubstitute(system);
+  const messages = [];
+  if (system.trim()) messages.push({ role: 'system', content: system });
+  messages.push({ role: 'user', content: user });
+  const out = document.getElementById('pg_output');
+  out.textContent = '';
+  document.getElementById('pg_status').textContent = '请求中…';
+  pgCtrl = new AbortController();
+  document.getElementById('pg_send').disabled = true;
+  document.getElementById('pg_stop').disabled = false;
+  const t0 = Date.now();
+  // U3 修复：测试台超时自动取消（5 分钟），避免流式请求无限挂起。
+  const pgTimeout = setTimeout(() => { if (pgCtrl) pgCtrl.abort(); }, 5 * 60 * 1000);
+  try {
+    const resp = await fetch('/v1/chat/completions', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + getToken() },
+      body: JSON.stringify({ model, messages, stream: true }),
+      signal: pgCtrl.signal
+    });
+    clearTimeout(pgTimeout);
+    if (!resp.ok) {
+      const errTxt = await resp.text();
+      if (resp.status === 401) {
+        clearToken();
+        showGate();
+        out.textContent = '密钥已失效，请重新验证管理密钥。';
+        document.getElementById('pg_status').textContent = '未授权';
+        return;
+      }
+      out.textContent = '[HTTP ' + resp.status + '] ' + errTxt;
+      document.getElementById('pg_status').textContent = '失败';
+      return;
+    }
+    const reader = resp.body.getReader();
+    const decoder = new TextDecoder();
+    let buf = '', usage = null, chars = 0;
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      buf += decoder.decode(value, { stream: true });
+      let idx;
+      while ((idx = buf.indexOf('\n\n')) >= 0) {
+        const chunk = buf.slice(0, idx); buf = buf.slice(idx + 2);
+        if (chunk.startsWith('data:')) {
+          const data = chunk.slice(5).trim();
+          if (data === '[DONE]') continue;
+          try {
+            const j = JSON.parse(data);
+            const d = j.choices && j.choices[0] && j.choices[0].delta;
+            if (d && d.content) { out.textContent += d.content; chars += d.content.length; out.scrollTop = out.scrollHeight; }
+            if (j.usage) usage = j.usage;
+          } catch (e) {}
+        }
+      }
+    }
+    let st = '完成 · ' + ((Date.now() - t0) / 1000).toFixed(1) + 's';
+    if (usage) st += ' · ~' + ((usage.prompt_tokens || 0)) + '+' + (usage.completion_tokens || 0) + ' tok';
+    else if (chars) st += ' · ~' + chars + ' 字符';
+    document.getElementById('pg_status').textContent = st;
+  } catch (e) {
+    if (e.name !== 'AbortError') { out.textContent += '\n[error] ' + e.message; out.scrollTop = out.scrollHeight; document.getElementById('pg_status').textContent = '错误'; }
+  } finally {
+    document.getElementById('pg_send').disabled = false;
+    document.getElementById('pg_stop').disabled = true;
+  }
+}
+function pgStop() { if (pgCtrl) pgCtrl.abort(); }
+function pgClear() { document.getElementById('pg_output').textContent = ''; document.getElementById('pg_user').value = ''; document.getElementById('pg_status').textContent = ''; }
+
+/* ============ G4 提示词模板 CRUD ============ */
+async function openTemplates() {
+  document.getElementById('templatesModal').classList.add('show');
+  await tmplRender();
+}
+function closeTemplates() { document.getElementById('templatesModal').classList.remove('show'); }
+async function tmplRender() {
+  const box = document.getElementById('tmpl_list');
+  box.innerHTML = '<div class="empty">加载中…</div>';
+  try {
+    const list = await (await apiFetch('/api/templates')).json();
+    if (!list || !list.length) { box.innerHTML = '<div class="empty">还没有模板，写一条保存吧。</div>'; return; }
+    box.innerHTML = '';
+    list.forEach(t => {
+      const row = document.createElement('div');
+      row.style.cssText = 'display:flex; gap:10px; align-items:center; padding:8px 0; border-bottom:1px solid var(--border);';
+      const name = document.createElement('div');
+      name.style.cssText = 'flex:1; font-weight:600;';
+      name.textContent = t.name;
+      const edit = document.createElement('button'); edit.className = 'btn'; edit.style.fontSize = '12px'; edit.textContent = '编辑';
+      edit.onclick = () => { document.getElementById('tmpl_name').value = t.name; document.getElementById('tmpl_content').value = t.content || ''; };
+      const del = document.createElement('button'); del.className = 'btn'; del.style.fontSize = '12px'; del.textContent = '删除';
+      del.onclick = () => tmplDelete(t.id);
+      row.appendChild(name); row.appendChild(edit); row.appendChild(del);
+      box.appendChild(row);
+    });
+  } catch (e) { if (e.message !== 'Unauthorized') { console.error(e); box.innerHTML = '<div class="empty">加载失败</div>'; } }
+}
+async function tmplSave() {
+  const name = document.getElementById('tmpl_name').value.trim();
+  const content = document.getElementById('tmpl_content').value;
+  if (!name) { showToast('请填写模板名称', 'error'); return; }
+  try {
+    const res = await apiFetch('/api/templates', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name, content })
+    });
+    if (res.ok) { showToast('模板已保存', 'ok'); document.getElementById('tmpl_name').value = ''; document.getElementById('tmpl_content').value = ''; await tmplRender(); }
+    else showToast('保存失败', 'error');
+  } catch (e) { if (e.message !== 'Unauthorized') console.error(e); }
+}
+function tmplNew() { document.getElementById('tmpl_name').value = ''; document.getElementById('tmpl_content').value = ''; }
+async function tmplDelete(id) {
+  if (!confirm('确定删除该模板？')) return;
+  try {
+    const res = await apiFetch('/api/templates/' + encodeURIComponent(id), { method: 'DELETE' });
+    if (res.ok) { showToast('已删除', 'ok'); await tmplRender(); }
+    else showToast('删除失败', 'error');
+  } catch (e) { if (e.message !== 'Unauthorized') console.error(e); }
+}
 </script>
 </body>
 </html>

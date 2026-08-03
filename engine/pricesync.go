@@ -31,12 +31,14 @@ type PriceSyncStatus struct {
 
 // PriceSync 价格同步器
 type PriceSync struct {
-	mu      sync.Mutex
-	appDir  string
-	dataDir string
-	catalog *Catalog
-	client  *http.Client
-	status  PriceSyncStatus
+	mu       sync.Mutex
+	appDir   string
+	dataDir  string
+	catalog  *Catalog
+	client   *http.Client
+	status   PriceSyncStatus
+	enabled  bool
+	interval time.Duration
 }
 
 // NewPriceSync 创建同步器
@@ -193,10 +195,38 @@ func (ps *PriceSync) setError(err error) {
 	ps.mu.Unlock()
 }
 
-// AutoSyncLoop 后台自动同步：每 24h 检查一次，覆盖层超过 7 天未更新才真正拉取。
+// SetEnabled 设置是否启用自动同步（A15）
+func (ps *PriceSync) SetEnabled(on bool) {
+	ps.mu.Lock()
+	defer ps.mu.Unlock()
+	ps.enabled = on
+}
+
+// SetInterval 设置自动同步间隔（A15）
+func (ps *PriceSync) SetInterval(d time.Duration) {
+	ps.mu.Lock()
+	defer ps.mu.Unlock()
+	if d < time.Hour {
+		d = time.Hour
+	}
+	ps.interval = d
+}
+
+// AutoSyncLoop 后台自动同步：按 enabled/interval 动态检查，覆盖层超过 7 天未更新才真正拉取。
 // 首次启动且从未同步过时延迟 5 分钟再尝试（避开开机网络未就绪窗口）。
 func (ps *PriceSync) AutoSyncLoop(stop <-chan struct{}) {
 	tryOnce := func() {
+		ps.mu.Lock()
+		if !ps.enabled {
+			ps.mu.Unlock()
+			return
+		}
+		interval := ps.interval
+		ps.mu.Unlock()
+		if interval <= 0 {
+			interval = 24 * time.Hour
+		}
+
 		if fi, err := os.Stat(ps.syncPath()); err == nil {
 			if time.Since(fi.ModTime()) < 7*24*time.Hour {
 				return // 数据仍新鲜
@@ -204,18 +234,37 @@ func (ps *PriceSync) AutoSyncLoop(stop <-chan struct{}) {
 		}
 		_, _ = ps.Sync()
 	}
+	// P2-1：改用 time.NewTimer + 显式 Stop，避免 goroutine 取消后 time.After 定时器泄漏
+	timer := time.NewTimer(5 * time.Minute)
+	defer timer.Stop()
 	select {
-	case <-time.After(5 * time.Minute):
+	case <-timer.C:
 		tryOnce()
 	case <-stop:
 		return
 	}
-	ticker := time.NewTicker(24 * time.Hour)
+	// 用最小 1h  ticker + 内部间隔判断，支持运行时改 interval
+	ticker := time.NewTicker(time.Hour)
 	defer ticker.Stop()
+	var next time.Time
 	for {
 		select {
 		case <-ticker.C:
-			tryOnce()
+			ps.mu.Lock()
+			interval := ps.interval
+			enabled := ps.enabled
+			ps.mu.Unlock()
+			if !enabled {
+				next = time.Time{}
+				continue
+			}
+			if interval <= 0 {
+				interval = 24 * time.Hour
+			}
+			if next.IsZero() || time.Now().After(next) {
+				tryOnce()
+				next = time.Now().Add(interval)
+			}
 		case <-stop:
 			return
 		}

@@ -24,7 +24,9 @@ type ModelScore struct {
 
 const (
 	QualityWindow = 20 // 滑动窗口大小
-	LatencyWeight = 0.3
+	// 权重：可用率 70%、延迟 30%（见 Score 内 score 计算）
+	AvailabilityWeight = 0.7
+	LatencyWeight      = 0.3
 )
 
 // Scorer 质量分计算器
@@ -78,8 +80,11 @@ func (s *Scorer) Score(model string) ModelScore {
 	// 延迟分：100ms 得 100 分，每增加 100ms 扣 10 分，最低 0
 	latencyScore := 100.0 - math.Max(0, (float64(avgLatency.Milliseconds())-100)/100*10)
 
-	// 综合分：可用率 70% + 延迟分 30%
-	score := availability*70 + latencyScore*LatencyWeight
+	// 综合分：可用率 70% + 延迟 30%，二者都归一化到 0~100 后按权重加权。
+	// P3-2：显式写出权重系数（0.7/0.3），避免旧写法 availability*70 + latencyScore*0.3
+	// 量纲混用导致「可用率满分到底是 70 还是 100」的歧义。
+	availabilityScore := availability * 100 // 0~100
+	score := availabilityScore*AvailabilityWeight + latencyScore*LatencyWeight
 
 	return ModelScore{
 		Model:     model,

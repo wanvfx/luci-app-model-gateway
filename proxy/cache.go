@@ -15,15 +15,15 @@ import (
 
 // ModelDetail 模型详情缓存条目
 type ModelDetail struct {
-	ID            string     `json:"id"`
-	Object        string     `json:"object"`
-	Created       int64      `json:"created"`
-	OwnedBy       string     `json:"owned_by"`
-	ContextLen    int        `json:"context_length"`
-	MaxPosEmb     int        `json:"max_position_embeddings"`
-	MaxModelLen   int        `json:"max_model_len"`
-	PromptPrice   float64    `json:"prompt_price"`
-	CompletePrice float64    `json:"completion_price"`
+	ID            string  `json:"id"`
+	Object        string  `json:"object"`
+	Created       int64   `json:"created"`
+	OwnedBy       string  `json:"owned_by"`
+	ContextLen    int     `json:"context_length"`
+	MaxPosEmb     int     `json:"max_position_embeddings"`
+	MaxModelLen   int     `json:"max_model_len"`
+	PromptPrice   float64 `json:"prompt_price"`
+	CompletePrice float64 `json:"completion_price"`
 	// 嵌套 pricing（OpenRouter 等上游返回 pricing.prompt / pricing.completion）。
 	// 非 nil 表示上游确实返回了 pricing 字段，可用于免费判定（区分“未提供”与“价格为 0”）。
 	Pricing *PriceInfo `json:"pricing"`
@@ -162,7 +162,7 @@ func (c *ModelCache) FetchAndCache(providers []*config.Provider, client *http.Cl
 				ch <- result{provider: prov, err: err}
 				return
 			}
-			req.Header.Set("Authorization", "Bearer "+prov.APIKey)
+			prov.ApplyAuth(req.Header)
 			resp, err := client.Do(req)
 			if err != nil {
 				ch <- result{provider: prov, err: err}

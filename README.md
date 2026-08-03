@@ -9,6 +9,8 @@
 - 路由组（默认 `256k` / `1m`）+ 6 种策略：质量（含动态惩罚）/ 优先级 / 最低延迟 / 最低成本 / 轮询 / **内容分类 `classify`** + `auto` 虚拟模型
 - 自动故障转移（全候选顺序切换）+ 熔断 / 健康探活（对齐 Python 参考版逐模型真实探测）
 - 别名映射、识图（多模态）、🛡️ 严格能力矩阵（按能力过滤候选，避免文不对题）
+- 🆓 免 Key 提供者市场实测标注（17 家逐一实测，`keyfree_status` 五态 verified/adapter/rate_limited/needs_key/incompatible + 原因，卡片徽章 + 排序 + 联动过滤）
+- 🔌 通用协议适配引擎（声明式 `AdapterSpec` 规格 + 运行时解释执行，零代码扩展非 OpenAI 兼容端点；内置 duckduckgo / theoldllm / felo / text-plain 四套适配器；`adapters.json` 可覆盖/新增）
 
 **省钱与护栏**
 - 语义缓存（精确 + 近重复 simhash，非流式直返 / 流式 SSE 回放）
@@ -38,6 +40,8 @@ opkg install luci-app-model-gateway_*.ipk
 /etc/init.d/model-gateway enable
 /etc/init.d/model-gateway start
 ```
+
+> 🌐 本版默认监听所有网卡（`bind_addr 0.0.0.0`），装好即可从局域网任意电脑直接访问 `http://<路由器LAN IP>:12211`，无需额外配置；如需仅本机访问可改 `bind_addr` 为 `127.0.0.1`。
 
 ## 使用教程
 
@@ -94,14 +98,27 @@ CGO_ENABLED=0 GOOS=linux GOARCH=arm64 go build -ldflags="-s -w" -o dist/model-ga
 python3 ipk-build/mkipk.py
 ```
 
-## 最近更新（r20260728c）
+## 最近更新（v1.9.0 · r20260802c）
 
-在 v1.5.3（r20260727c）基础上：
+### 🆓 免 Key 提供者 + 通用协议适配引擎（本版重点）
 
-- 🔋 **智能巡检计数封顶 20/20**：旧版每日 12 点静默复查会逐日累加「密集巡检进度」，约 19 天涨到 39，与"约 20 次后休眠"矛盾；现已修正，徽标永久封顶 `20/20`，「立即检测」按钮不受影响。
-- 🎛️ **模型卡片启用/停用按钮（新功能）**：稳定性页每行新增「操作」列，启用=绿色、停用=灰色，默认启用；停用的模型行整体置灰，点击即时写入 UCI `disabled_models` 并热生效，无需重启服务。
-- 🐞 **修复高危前端 bug**：删除了导致整段 SPA 脚本解析失败的多余 `}`，此前会让所有面板按钮 onclick 全部失效，现已恢复正常。
-- 🧩 **成本与用量统计页布局修复**：修正标题行容器漏闭合导致预算卡 / 汇总卡 / 三张表格横向错乱的问题，恢复正常纵向布局。
+- 🏷️ **免 Key 市场实测标注**：17 家标称免 Key 的提供者逐一按网关自身逻辑实测，目录新增 `keyfree_status`（verified / adapter / rate_limited / needs_key / incompatible）+ `keyfree_note`；市场卡片直接显示状态徽章与原因，勾「只看免 Key」按状态排序。
+- 🔌 **通用协议适配引擎（Phase C）**：声明式 `AdapterSpec` 规格 + 运行时解释执行，**一份规格 = 一家协议**，免写代码即可接入非 OpenAI 兼容端点。支持自定义 chat/models 路径、预检握手取令牌（TTL 缓存）、请求体模板渲染（占位符渲染成合法 JSON 值，防注入）、响应提取（JSON 路径 / 纯文本）、四类流式（sse-json / sse-text / ndjson / none 统一转 OpenAI SSE，`mode=none` 自动降级单块 SSE）。内置 **duckduckgo / theoldllm / felo / text-plain** 四套适配器；数据目录 `adapters.json` 可覆盖/新增，无需发版。
+- 🧩 **免 Key 主链路复原（对标 OmniRoute）**：`auth_scheme="none"` 不注入鉴权头 + `NoAuth` 标记 + `AnonymousAPIKey` 兜底 + `injectProviderSpecificHeaders` 扩展点（opencode / pollinations 已接）。
+- 💾 **免费模型自动勾选 + 变动检测**：`free_only=true` 时模型管理弹窗自动勾选免费模型；后台定时巡检免费模型变动（受 UCI 控制）。
+- 🔒 **密钥框永久保留**：免 Key 提供者不再隐藏 API Key 框（可留空；连接失败提示需鉴权再填），避免「假免 Key 实则需密钥」无从补救。
+- 🐞 **目录硬错误修正**：uncloseai 模型 ID 修正（404→可用）、ovhcloud 补齐 12 个真实对话模型、mimocode 补 `/v1` 并改标需密钥、hackclub 改标需密钥；免 Key 家数 17 → **15**。
+
+> v1.6.0–v1.8.3 之间还落地了 Gemini / Claude / OpenAI Responses 原生协议翻译、Webhooks、A2A、Playground、安全套件等，详见 `RELEASE_NOTES_v1.8.*` 与 `REVIEW_REPORT_2026-07-30.md`。
+
+### 🌐 r20260802c · 默认 LAN 访问 + 安全加固（本版重点）
+
+- 🌐 **默认监听所有网卡（bind_addr 0.0.0.0）**：此前默认只听路由器本机（`127.0.0.1`），从局域网电脑访问会被拒（`ERR_CONNECTION_REFUSED`）。**本版起默认 `0.0.0.0`，装好即可从电脑直接 `http://<路由器LAN IP>:12211` 打开面板**，无需再 SSH 改配置。想更保守可在 UCI 把 `bind_addr` 改回 `127.0.0.1`（仅本机访问，需配反代）。
+- 🛡️ **第四轮全方位安全加固 14 项（已全修）**：CBI 命令注入防护（Web 配置表单白名单 + shell 转义）、令牌预检 broadcast 风暴修复、用量写盘并发竞态修复、前端 XSS 转义、verify-key 报错转义、UCI 转义互逆（含换行/单引号的配置读写 round-trip 正确）、admin_key 写失败不再静默回滚、别名/钩子原子替换、打包真源门禁（杜绝打包漂移）、istorec 具名段修正、路由评分权重归一（可用率 0.7 + 延迟 0.3）、密钥强随机（`crypto/rand` 失败即报错）、错误日志不再掩盖根因、Gemini 流式首块补 `role:assistant`。让网关在路由内网里更稳、更安全。
+
+### 免 Key 怎么挑（结论）
+
+17 家实测结论：**3 家真免 Key 出流（pollinations / opencode / uncloseai）+ 3 家经内置适配器打通（duckduckgo / theoldllm / felo）+ 6 家上游限流（g4f 系 / ovhcloud）+ 2 家实为需密钥（hackclub / mimocode）+ 3 家架构不兼容（auggie / veoaifree / chipotle）**。推荐 `pollinations + opencode + uncloseai` 配熔断故障转移。完整教程见 [`announcement.md`](announcement.md)「第九 / 十节」。
 
 ## 项目地址
 

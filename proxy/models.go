@@ -6,6 +6,8 @@ import (
 	"strings"
 	"sync"
 	"time"
+
+	"github.com/wanvfx/luci-app-model-gateway/engine"
 )
 
 // modelsCache /v1/models 响应缓存（30 秒，与 Python 原版 MODELS_CACHE_TTL 一致）
@@ -46,13 +48,14 @@ func (c *modelsCache) Invalidate() {
 }
 
 // enrichWithCatalog 从模型参考库注入分类信息（档位/能力/价格/家族）。
-// 未命中参考库时走兜底（默认 mid 档 + text 能力，并按名族关键词补全 vision/reasoning），
-// 确保前端不再出现"未分类"。
+// 若参考库未加载（catalog == nil），仍注入兜底值，确保前端不再出现"未分类"。
 func (s *Server) enrichWithCatalog(entry map[string]interface{}, model string) {
-	if s.catalog == nil {
-		return
+	var e *engine.CatalogEntry
+	if s.catalog != nil {
+		e = s.catalog.LookupOrDefault(model)
+	} else {
+		e = &engine.CatalogEntry{Tier: "mid", Capabilities: []string{"text"}}
 	}
-	e := s.catalog.LookupOrDefault(model)
 	if e.Tier != "" {
 		entry["tier"] = e.Tier
 	}
@@ -133,7 +136,7 @@ func (s *Server) handleModels(w http.ResponseWriter, r *http.Request) {
 		})
 	}
 
-	for _, p := range s.cfg.Load().Providers {
+	for _, p := range s.cfg.Load().UsableProviders() {
 		if !p.Enabled {
 			continue
 		}

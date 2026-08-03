@@ -1,0 +1,900 @@
+{
+  "generated_at": "2026-08-01T16:52:50",
+  "base": "http://192.168.100.1:12211/v1",
+  "total": 89,
+  "ok": 27,
+  "empty": 5,
+  "fail": 57,
+  "results": [
+    {
+      "id": "SenseNova-deepseek-v4-flash",
+      "provider": "SenseNova",
+      "status": 200,
+      "cat": "OK",
+      "content": "🤖 SenseNova · deepseek-v4-flash\n\n你好",
+      "finish": "stop",
+      "latency": 2.18,
+      "error": ""
+    },
+    {
+      "id": "NVIDIA-nvidia/nemotron-nano-12b-v2-vl",
+      "provider": "NVIDIA",
+      "status": 200,
+      "cat": "OK",
+      "content": "🤖 NVIDIA · nvidia/nemotron-nano-12b-v2-vl\n\n你好\n",
+      "finish": "stop",
+      "latency": 2.77,
+      "error": ""
+    },
+    {
+      "id": "NVIDIA-nvidia/llama-3.1-nemotron-nano-vl-8b-v1",
+      "provider": "NVIDIA",
+      "status": 200,
+      "cat": "OK",
+      "content": "🤖 NVIDIA · nvidia/llama-3.1-nemotron-nano-vl-8b-v1\n\n你好。",
+      "finish": "stop",
+      "latency": 2.83,
+      "error": ""
+    },
+    {
+      "id": "NVIDIA-deepseek-ai/deepseek-v4-flash",
+      "provider": "NVIDIA",
+      "status": 200,
+      "cat": "OK",
+      "content": "🤖 NVIDIA · deepseek-ai/deepseek-v4-flash\n\nHello",
+      "finish": "stop",
+      "latency": 2.86,
+      "error": ""
+    },
+    {
+      "id": "256k",
+      "provider": "256k",
+      "status": 200,
+      "cat": "OK",
+      "content": "🤖 NVIDIA · nvidia/nemotron-3-super-120b-a12b\n\n你好",
+      "finish": "stop",
+      "latency": 3.1,
+      "error": ""
+    },
+    {
+      "id": "NVIDIA-meta/llama-3.2-11b-vision-instruct",
+      "provider": "NVIDIA",
+      "status": 200,
+      "cat": "OK",
+      "content": "🤖 NVIDIA · meta/llama-3.2-11b-vision-instruct\n\n哈囉",
+      "finish": "stop",
+      "latency": 3.15,
+      "error": ""
+    },
+    {
+      "id": "NVIDIA-deepseek-ai/deepseek-v4-pro",
+      "provider": "NVIDIA",
+      "status": 200,
+      "cat": "OK",
+      "content": "🤖 NVIDIA · deepseek-ai/deepseek-v4-pro\n\n你好",
+      "finish": "stop",
+      "latency": 3.19,
+      "error": ""
+    },
+    {
+      "id": "SenseNova-glm-5.2",
+      "provider": "SenseNova",
+      "status": 200,
+      "cat": "OK",
+      "content": "🤖 SenseNova · glm-5.2\n\n你好。",
+      "finish": "stop",
+      "latency": 3.27,
+      "error": ""
+    },
+    {
+      "id": "1m",
+      "provider": "1m",
+      "status": 200,
+      "cat": "OK",
+      "content": "🤖 NVIDIA · deepseek-ai/deepseek-v4-pro\n\n好",
+      "finish": "stop",
+      "latency": 3.34,
+      "error": ""
+    },
+    {
+      "id": "SenseNova-sensenova-6.7-flash-lite",
+      "provider": "SenseNova",
+      "status": 200,
+      "cat": "EMPTY",
+      "content": "",
+      "finish": "length",
+      "latency": 1.42,
+      "error": ""
+    },
+    {
+      "id": "NVIDIA-nvidia/nemotron-3-ultra-550b-a55b",
+      "provider": "NVIDIA",
+      "status": 200,
+      "cat": "OK",
+      "content": "🤖 NVIDIA · nvidia/nemotron-3-ultra-550b-a55b\n\n你好",
+      "finish": "stop",
+      "latency": 3.6,
+      "error": ""
+    },
+    {
+      "id": "NVIDIA-nvidia/nemotron-3-super-120b-a12b",
+      "provider": "NVIDIA",
+      "status": 200,
+      "cat": "OK",
+      "content": "🤖 NVIDIA · nvidia/nemotron-3-super-120b-a12b\n\n嗨",
+      "finish": "stop",
+      "latency": 4.73,
+      "error": ""
+    },
+    {
+      "id": "魔搭-deepseek-ai/DeepSeek-V4-Flash",
+      "provider": "system",
+      "status": 502,
+      "cat": "FAIL",
+      "content": "",
+      "finish": "",
+      "latency": 2.52,
+      "error": "{\"detail\":\"所有候选模型均失败: upstream returned 400\"}"
+    },
+    {
+      "id": "魔搭-Qwen/Qwen3-VL-8B-Thinking",
+      "provider": "system",
+      "status": 502,
+      "cat": "FAIL",
+      "content": "",
+      "finish": "",
+      "latency": 2.1,
+      "error": "{\"detail\":\"所有候选模型均失败: upstream returned 400\"}"
+    },
+    {
+      "id": "魔搭-Qwen/Qwen3.5-397B-A17B",
+      "provider": "system",
+      "status": 502,
+      "cat": "FAIL",
+      "content": "",
+      "finish": "",
+      "latency": 1.97,
+      "error": "{\"detail\":\"所有候选模型均失败: upstream returned 400\"}"
+    },
+    {
+      "id": "魔搭-Qwen/Qwen3-VL-8B-Instruct",
+      "provider": "system",
+      "status": 502,
+      "cat": "FAIL",
+      "content": "",
+      "finish": "",
+      "latency": 2.15,
+      "error": "{\"detail\":\"所有候选模型均失败: upstream returned 400\"}"
+    },
+    {
+      "id": "魔搭-PaddlePaddle/ERNIE-4.5-VL-28B-A3B-PT",
+      "provider": "system",
+      "status": 502,
+      "cat": "FAIL",
+      "content": "",
+      "finish": "",
+      "latency": 2.21,
+      "error": "{\"detail\":\"所有候选模型均失败: upstream returned 400\"}"
+    },
+    {
+      "id": "魔搭-Qwen/Qwen3.5-122B-A10B",
+      "provider": "system",
+      "status": 502,
+      "cat": "FAIL",
+      "content": "",
+      "finish": "",
+      "latency": 2.03,
+      "error": "{\"detail\":\"所有候选模型均失败: upstream returned 400\"}"
+    },
+    {
+      "id": "魔搭-deepseek-ai/DeepSeek-V4-Pro",
+      "provider": "system",
+      "status": 502,
+      "cat": "FAIL",
+      "content": "",
+      "finish": "",
+      "latency": 2.48,
+      "error": "{\"detail\":\"所有候选模型均失败: upstream returned 400\"}"
+    },
+    {
+      "id": "魔搭-OpenGVLab/InternVL3_5-241B-A28B",
+      "provider": "system",
+      "status": 502,
+      "cat": "FAIL",
+      "content": "",
+      "finish": "",
+      "latency": 2.45,
+      "error": "{\"detail\":\"所有候选模型均失败: upstream returned 400\"}"
+    },
+    {
+      "id": "识图",
+      "provider": "识图",
+      "status": 502,
+      "cat": "FAIL",
+      "content": "",
+      "finish": "",
+      "latency": 5.36,
+      "error": "{\"detail\":\"所有候选模型均失败: upstream returned 400\"}"
+    },
+    {
+      "id": "pollinations-claude-large",
+      "provider": "",
+      "status": 502,
+      "cat": "FAIL",
+      "content": "",
+      "finish": "",
+      "latency": 1.04,
+      "error": "{\"detail\":\"所有候选模型均失败: upstream returned 401\"}"
+    },
+    {
+      "id": "pollinations-gemini-large",
+      "provider": "",
+      "status": 502,
+      "cat": "FAIL",
+      "content": "",
+      "finish": "",
+      "latency": 2.79,
+      "error": "{\"detail\":\"所有候选模型均失败: upstream returned 401\"}"
+    },
+    {
+      "id": "pollinations-qwen-vision",
+      "provider": "",
+      "status": 502,
+      "cat": "FAIL",
+      "content": "",
+      "finish": "",
+      "latency": 1.31,
+      "error": "{\"detail\":\"所有候选模型均失败: upstream returned 401\"}"
+    },
+    {
+      "id": "pollinations-kimi",
+      "provider": "",
+      "status": 502,
+      "cat": "FAIL",
+      "content": "",
+      "finish": "",
+      "latency": 1.35,
+      "error": "{\"detail\":\"所有候选模型均失败: upstream returned 401\"}"
+    },
+    {
+      "id": "pollinations-minimax",
+      "provider": "",
+      "status": 502,
+      "cat": "FAIL",
+      "content": "",
+      "finish": "",
+      "latency": 2.14,
+      "error": "{\"detail\":\"所有候选模型均失败: upstream returned 401\"}"
+    },
+    {
+      "id": "pollinations-openai-large",
+      "provider": "",
+      "status": 502,
+      "cat": "FAIL",
+      "content": "",
+      "finish": "",
+      "latency": 1.72,
+      "error": "{\"detail\":\"所有候选模型均失败: upstream returned 401\"}"
+    },
+    {
+      "id": "pollinations-midijourney-large",
+      "provider": "",
+      "status": 502,
+      "cat": "FAIL",
+      "content": "",
+      "finish": "",
+      "latency": 1.77,
+      "error": "{\"detail\":\"所有候选模型均失败: upstream returned 401\"}"
+    },
+    {
+      "id": "pollinations-perplexity-reasoning",
+      "provider": "",
+      "status": 502,
+      "cat": "FAIL",
+      "content": "",
+      "finish": "",
+      "latency": 1.81,
+      "error": "{\"detail\":\"所有候选模型均失败: upstream returned 401\"}"
+    },
+    {
+      "id": "pollinations-nova",
+      "provider": "",
+      "status": 502,
+      "cat": "FAIL",
+      "content": "",
+      "finish": "",
+      "latency": 1.94,
+      "error": "{\"detail\":\"所有候选模型均失败: upstream returned 401\"}"
+    },
+    {
+      "id": "pollinations-mistral",
+      "provider": "",
+      "status": 502,
+      "cat": "FAIL",
+      "content": "",
+      "finish": "",
+      "latency": 1.0,
+      "error": "{\"detail\":\"所有候选模型均失败: upstream returned 401\"}"
+    },
+    {
+      "id": "pollinations-midijourney",
+      "provider": "",
+      "status": 502,
+      "cat": "FAIL",
+      "content": "",
+      "finish": "",
+      "latency": 2.06,
+      "error": "{\"detail\":\"所有候选模型均失败: upstream returned 401\"}"
+    },
+    {
+      "id": "pollinations-gemini-search",
+      "provider": "",
+      "status": 502,
+      "cat": "FAIL",
+      "content": "",
+      "finish": "",
+      "latency": 0.75,
+      "error": "{\"detail\":\"所有候选模型均失败: upstream returned 401\"}"
+    },
+    {
+      "id": "pollinations-deepseek",
+      "provider": "",
+      "status": 502,
+      "cat": "FAIL",
+      "content": "",
+      "finish": "",
+      "latency": 0.98,
+      "error": "{\"detail\":\"所有候选模型均失败: upstream returned 401\"}"
+    },
+    {
+      "id": "pollinations-qwen-large",
+      "provider": "",
+      "status": 502,
+      "cat": "FAIL",
+      "content": "",
+      "finish": "",
+      "latency": 0.81,
+      "error": "{\"detail\":\"所有候选模型均失败: upstream returned 401\"}"
+    },
+    {
+      "id": "pollinations-gemini",
+      "provider": "",
+      "status": 502,
+      "cat": "FAIL",
+      "content": "",
+      "finish": "",
+      "latency": 0.63,
+      "error": "{\"detail\":\"所有候选模型均失败: upstream returned 401\"}"
+    },
+    {
+      "id": "pollinations-qwen-safety",
+      "provider": "",
+      "status": 502,
+      "cat": "FAIL",
+      "content": "",
+      "finish": "",
+      "latency": 0.54,
+      "error": "{\"detail\":\"所有候选模型均失败: upstream returned 401\"}"
+    },
+    {
+      "id": "pollinations-openai-fast",
+      "provider": "",
+      "status": 502,
+      "cat": "FAIL",
+      "content": "",
+      "finish": "",
+      "latency": 0.51,
+      "error": "{\"detail\":\"所有候选模型均失败: upstream returned 401\"}"
+    },
+    {
+      "id": "pollinations-qwen-coder",
+      "provider": "",
+      "status": 502,
+      "cat": "FAIL",
+      "content": "",
+      "finish": "",
+      "latency": 0.45,
+      "error": "{\"detail\":\"所有候选模型均失败: upstream returned 401\"}"
+    },
+    {
+      "id": "pollinations-perplexity-fast",
+      "provider": "",
+      "status": 502,
+      "cat": "FAIL",
+      "content": "",
+      "finish": "",
+      "latency": 0.45,
+      "error": "{\"detail\":\"所有候选模型均失败: upstream returned 401\"}"
+    },
+    {
+      "id": "pollinations-grok-large",
+      "provider": "",
+      "status": 502,
+      "cat": "FAIL",
+      "content": "",
+      "finish": "",
+      "latency": 0.47,
+      "error": "{\"detail\":\"所有候选模型均失败: upstream returned 401\"}"
+    },
+    {
+      "id": "pollinations-nova-fast",
+      "provider": "",
+      "status": 502,
+      "cat": "FAIL",
+      "content": "",
+      "finish": "",
+      "latency": 0.44,
+      "error": "{\"detail\":\"所有候选模型均失败: upstream returned 401\"}"
+    },
+    {
+      "id": "pollinations-glm",
+      "provider": "",
+      "status": 502,
+      "cat": "FAIL",
+      "content": "",
+      "finish": "",
+      "latency": 0.44,
+      "error": "{\"detail\":\"所有候选模型均失败: upstream returned 401\"}"
+    },
+    {
+      "id": "NVIDIA-z-ai/glm-5.2",
+      "provider": "NVIDIA",
+      "status": 200,
+      "cat": "OK",
+      "content": "🤖 NVIDIA · z-ai/glm-5.2\n\n你好。",
+      "finish": "stop",
+      "latency": 8.11,
+      "error": ""
+    },
+    {
+      "id": "pollinations-grok",
+      "provider": "",
+      "status": 502,
+      "cat": "FAIL",
+      "content": "",
+      "finish": "",
+      "latency": 4.61,
+      "error": "{\"detail\":\"所有候选模型均失败: upstream returned 401\"}"
+    },
+    {
+      "id": "pollinations-claude-fast",
+      "provider": "",
+      "status": 502,
+      "cat": "FAIL",
+      "content": "",
+      "finish": "",
+      "latency": 1.35,
+      "error": "{\"detail\":\"所有候选模型均失败: upstream returned 401\"}"
+    },
+    {
+      "id": "pollinations-qwen-coder-large",
+      "provider": "",
+      "status": 502,
+      "cat": "FAIL",
+      "content": "",
+      "finish": "",
+      "latency": 1.12,
+      "error": "{\"detail\":\"所有候选模型均失败: upstream returned 401\"}"
+    },
+    {
+      "id": "NVIDIA-minimaxai/minimax-m3",
+      "provider": "NVIDIA",
+      "status": 200,
+      "cat": "OK",
+      "content": "🤖 NVIDIA · minimaxai/minimax-m3\n\n你好",
+      "finish": "stop",
+      "latency": 9.0,
+      "error": ""
+    },
+    {
+      "id": "pollinations-gemini-fast",
+      "provider": "",
+      "status": 502,
+      "cat": "FAIL",
+      "content": "",
+      "finish": "",
+      "latency": 2.33,
+      "error": "{\"detail\":\"所有候选模型均失败: upstream returned 401\"}"
+    },
+    {
+      "id": "opencode-nemotron-3-ultra-free",
+      "provider": "opencode",
+      "status": 200,
+      "cat": "EMPTY",
+      "content": "",
+      "finish": "",
+      "latency": 2.42,
+      "error": ""
+    },
+    {
+      "id": "opencode-deepseek-v4-flash-free",
+      "provider": "opencode",
+      "status": 200,
+      "cat": "OK",
+      "content": "🤖 opencode · deepseek-v4-flash-free\n\n好",
+      "finish": "stop",
+      "latency": 2.36,
+      "error": ""
+    },
+    {
+      "id": "opencode-north-mini-code-free",
+      "provider": "opencode",
+      "status": 200,
+      "cat": "OK",
+      "content": "🤖 opencode · north-mini-code-free\n\n你好",
+      "finish": "stop",
+      "latency": 2.93,
+      "error": ""
+    },
+    {
+      "id": "pollinations-openai",
+      "provider": "",
+      "status": 502,
+      "cat": "FAIL",
+      "content": "",
+      "finish": "",
+      "latency": 3.05,
+      "error": "{\"detail\":\"所有候选模型均失败: upstream returned 401\"}"
+    },
+    {
+      "id": "auto",
+      "provider": "auto",
+      "status": 200,
+      "cat": "OK",
+      "content": "🤖 NVIDIA · z-ai/glm-5.2\n\n你好。",
+      "finish": "stop",
+      "latency": 10.85,
+      "error": ""
+    },
+    {
+      "id": "g4f-nvidia-nvidia/nemotron-3-nano-30b-a3b",
+      "provider": "nvidia",
+      "status": 502,
+      "cat": "FAIL",
+      "content": "",
+      "finish": "",
+      "latency": 0.88,
+      "error": "{\"detail\":\"所有候选模型均失败: upstream returned 429\"}"
+    },
+    {
+      "id": "uncloseai-solidrust/Hermes-3-Llama-3.1-8B-AWQ",
+      "provider": "vllm",
+      "status": 200,
+      "cat": "OK",
+      "content": "🤖 uncloseai · solidrust/Hermes-3-Llama-3.1-8B-AWQ\n\n你好。",
+      "finish": "stop",
+      "latency": 3.23,
+      "error": ""
+    },
+    {
+      "id": "g4f-pollinations-openai",
+      "provider": "",
+      "status": 502,
+      "cat": "FAIL",
+      "content": "",
+      "finish": "",
+      "latency": 1.11,
+      "error": "{\"detail\":\"所有候选模型均失败: upstream returned 401\"}"
+    },
+    {
+      "id": "g4f-pollinations-openai-fast",
+      "provider": "",
+      "status": 502,
+      "cat": "FAIL",
+      "content": "",
+      "finish": "",
+      "latency": 1.08,
+      "error": "{\"detail\":\"所有候选模型均失败: upstream returned 401\"}"
+    },
+    {
+      "id": "g4f-nvidia-minimaxai/minimax-m2.7",
+      "provider": "g4f-nvidia",
+      "status": 502,
+      "cat": "FAIL",
+      "content": "",
+      "finish": "",
+      "latency": 1.45,
+      "error": "{\"detail\":\"所有候选模型均失败: upstream returned 429\"}"
+    },
+    {
+      "id": "opencode-big-pickle",
+      "provider": "opencode",
+      "status": 200,
+      "cat": "OK",
+      "content": "🤖 opencode · big-pickle\n\n你好。",
+      "finish": "stop",
+      "latency": 4.84,
+      "error": ""
+    },
+    {
+      "id": "g4f-groq-llama-3.1-8b-instant",
+      "provider": "g4f-groq",
+      "status": 502,
+      "cat": "FAIL",
+      "content": "",
+      "finish": "",
+      "latency": 1.09,
+      "error": "{\"detail\":\"所有候选模型均失败: upstream returned 429\"}"
+    },
+    {
+      "id": "g4f-groq-llama-3.3-70b-versatile",
+      "provider": "g4f-groq",
+      "status": 502,
+      "cat": "FAIL",
+      "content": "",
+      "finish": "",
+      "latency": 1.95,
+      "error": "{\"detail\":\"所有候选模型均失败: upstream returned 429\"}"
+    },
+    {
+      "id": "opencode-mimo-v2.5-free",
+      "provider": "opencode",
+      "status": 200,
+      "cat": "OK",
+      "content": "🤖 opencode · mimo-v2.5-free\n\n你好",
+      "finish": "stop",
+      "latency": 6.98,
+      "error": ""
+    },
+    {
+      "id": "ovhcloud-Qwen3-Coder-30B-A3B-Instruct",
+      "provider": "ovhcloud",
+      "status": 200,
+      "cat": "OK",
+      "content": "🤖 ovhcloud · Qwen3-Coder-30B-A3B-Instruct\n\n你好",
+      "finish": "stop",
+      "latency": 2.6,
+      "error": ""
+    },
+    {
+      "id": "ovhcloud-Qwen2.5-VL-72B-Instruct",
+      "provider": "ovhcloud",
+      "status": 200,
+      "cat": "OK",
+      "content": "🤖 ovhcloud · Qwen2.5-VL-72B-Instruct\n\n你好",
+      "finish": "stop",
+      "latency": 1.03,
+      "error": ""
+    },
+    {
+      "id": "ovhcloud-gpt-oss-120b",
+      "provider": "ovhcloud",
+      "status": 200,
+      "cat": "OK",
+      "content": "🤖 ovhcloud · gpt-oss-120b\n\n你好",
+      "finish": "stop",
+      "latency": 1.04,
+      "error": ""
+    },
+    {
+      "id": "ovhcloud-Meta-Llama-3_3-70B-Instruct",
+      "provider": "ovhcloud",
+      "status": 502,
+      "cat": "FAIL",
+      "content": "",
+      "finish": "",
+      "latency": 0.22,
+      "error": "{\"detail\":\"所有候选模型均失败: upstream returned 429\"}"
+    },
+    {
+      "id": "ovhcloud-gpt-oss-20b",
+      "provider": "ovhcloud",
+      "status": 200,
+      "cat": "OK",
+      "content": "🤖 ovhcloud · gpt-oss-20b\n\n嗨",
+      "finish": "stop",
+      "latency": 1.4,
+      "error": ""
+    },
+    {
+      "id": "ovhcloud-Mistral-Small-3.2-24B-Instruct-2506",
+      "provider": "ovhcloud",
+      "status": 200,
+      "cat": "OK",
+      "content": "🤖 ovhcloud · Mistral-Small-3.2-24B-Instruct-2506\n\n你好",
+      "finish": "stop",
+      "latency": 0.32,
+      "error": ""
+    },
+    {
+      "id": "ovhcloud-Qwen3.5-397B-A17B",
+      "provider": "ovhcloud",
+      "status": 200,
+      "cat": "EMPTY",
+      "content": "",
+      "finish": "length",
+      "latency": 5.33,
+      "error": ""
+    },
+    {
+      "id": "ovhcloud-Mistral-Nemo-Instruct-2407",
+      "provider": "ovhcloud",
+      "status": 200,
+      "cat": "OK",
+      "content": "🤖 ovhcloud · Mistral-Nemo-Instruct-2407\n\nHello",
+      "finish": "stop",
+      "latency": 0.32,
+      "error": ""
+    },
+    {
+      "id": "ovhcloud-Mistral-7B-Instruct-v0.3",
+      "provider": "ovhcloud",
+      "status": 502,
+      "cat": "FAIL",
+      "content": "",
+      "finish": "",
+      "latency": 0.24,
+      "error": "{\"detail\":\"所有候选模型均失败: upstream returned 429\"}"
+    },
+    {
+      "id": "ovhcloud-Qwen3.6-27B",
+      "provider": "ovhcloud",
+      "status": 200,
+      "cat": "EMPTY",
+      "content": "",
+      "finish": "length",
+      "latency": 6.62,
+      "error": ""
+    },
+    {
+      "id": "g4f-nvidia-z-ai/glm-5.2",
+      "provider": "z-ai",
+      "status": 200,
+      "cat": "OK",
+      "content": "🤖 g4f-nvidia · z-ai/glm-5.2\n\n你好。",
+      "finish": "stop",
+      "latency": 9.3,
+      "error": ""
+    },
+    {
+      "id": "ovhcloud-Qwen3.5-9B",
+      "provider": "ovhcloud",
+      "status": 200,
+      "cat": "EMPTY",
+      "content": "",
+      "finish": "length",
+      "latency": 8.67,
+      "error": ""
+    },
+    {
+      "id": "ovhcloud-Qwen3-32B",
+      "provider": "ovhcloud",
+      "status": 200,
+      "cat": "OK",
+      "content": "🤖 ovhcloud · Qwen3-32B\n\n<think>\n好的，用户让我用一个词来打招呼。首先，我需要确定用户的需求是什么。他们可能是在测试我的语言能力，",
+      "finish": "length",
+      "latency": 9.7,
+      "error": ""
+    },
+    {
+      "id": "pollinations-mistral-large",
+      "provider": "",
+      "status": 502,
+      "cat": "FAIL",
+      "content": "",
+      "finish": "",
+      "latency": 30.02,
+      "error": "{\"detail\":\"所有候选模型均失败: Post \\\"https://gen.pollinations.ai/v1/chat/completions\\\": context deadline exceeded (Client.Timeout exceeded while awaiting headers)\"}"
+    },
+    {
+      "id": "pollinations-claude",
+      "provider": "",
+      "status": 502,
+      "cat": "FAIL",
+      "content": "",
+      "finish": "",
+      "latency": 30.01,
+      "error": "{\"detail\":\"所有候选模型均失败: Post \\\"https://gen.pollinations.ai/v1/chat/completions\\\": context deadline exceeded (Client.Timeout exceeded while awaiting headers)\"}"
+    },
+    {
+      "id": "duckduckgo-web-gpt-5.4-mini",
+      "provider": "opencode",
+      "status": 502,
+      "cat": "FAIL",
+      "content": "",
+      "finish": "",
+      "latency": 30.02,
+      "error": "{\"detail\":\"所有候选模型均失败: adapter duckduckgo preflight: preflight failed: Get \\\"https://duckduckgo.com/duckchat/v1/status\\\": context deadline exceeded (Client.Timeout exceeded while awaiting headers)\"}"
+    },
+    {
+      "id": "duckduckgo-web-gpt-5.4-nano",
+      "provider": "opencode",
+      "status": 502,
+      "cat": "FAIL",
+      "content": "",
+      "finish": "",
+      "latency": 30.01,
+      "error": "{\"detail\":\"所有候选模型均失败: adapter duckduckgo preflight: preflight failed: Get \\\"https://duckduckgo.com/duckchat/v1/status\\\": context deadline exceeded (Client.Timeout exceeded while awaiting headers)\"}"
+    },
+    {
+      "id": "duckduckgo-web-claude-haiku-4-5",
+      "provider": "opencode",
+      "status": 502,
+      "cat": "FAIL",
+      "content": "",
+      "finish": "",
+      "latency": 30.02,
+      "error": "{\"detail\":\"所有候选模型均失败: adapter duckduckgo preflight: preflight failed: Get \\\"https://duckduckgo.com/duckchat/v1/status\\\": context deadline exceeded (Client.Timeout exceeded while awaiting headers)\"}"
+    },
+    {
+      "id": "duckduckgo-web-mistral-small-2603",
+      "provider": "duckduckgo-web",
+      "status": 502,
+      "cat": "FAIL",
+      "content": "",
+      "finish": "",
+      "latency": 30.02,
+      "error": "{\"detail\":\"所有候选模型均失败: adapter duckduckgo preflight: preflight failed: Get \\\"https://duckduckgo.com/duckchat/v1/status\\\": context deadline exceeded (Client.Timeout exceeded while awaiting headers)\"}"
+    },
+    {
+      "id": "duckduckgo-web-tinfoil/gpt-oss-120b",
+      "provider": "duckduckgo-web",
+      "status": 502,
+      "cat": "FAIL",
+      "content": "",
+      "finish": "",
+      "latency": 30.02,
+      "error": "{\"detail\":\"所有候选模型均失败: adapter duckduckgo preflight: preflight failed: Get \\\"https://duckduckgo.com/duckchat/v1/status\\\": context deadline exceeded (Client.Timeout exceeded while awaiting headers)\"}"
+    },
+    {
+      "id": "duckduckgo-web-tinfoil/gemma4-31b",
+      "provider": "duckduckgo-web",
+      "status": 502,
+      "cat": "FAIL",
+      "content": "",
+      "finish": "",
+      "latency": 30.02,
+      "error": "{\"detail\":\"所有候选模型均失败: adapter duckduckgo preflight: preflight failed: Get \\\"https://duckduckgo.com/duckchat/v1/status\\\": context deadline exceeded (Client.Timeout exceeded while awaiting headers)\"}"
+    },
+    {
+      "id": "felo-web-felo-chat",
+      "provider": "felo-web",
+      "status": 502,
+      "cat": "FAIL",
+      "content": "",
+      "finish": "",
+      "latency": 30.02,
+      "error": "{\"detail\":\"所有候选模型均失败: Post \\\"https://felo.ai/api/search/threads\\\": context deadline exceeded (Client.Timeout exceeded while awaiting headers)\"}"
+    },
+    {
+      "id": "felo-web-felo-search",
+      "provider": "felo-web",
+      "status": 502,
+      "cat": "FAIL",
+      "content": "",
+      "finish": "",
+      "latency": 30.01,
+      "error": "{\"detail\":\"所有候选模型均失败: Post \\\"https://felo.ai/api/search/threads\\\": context deadline exceeded (Client.Timeout exceeded while awaiting headers)\"}"
+    },
+    {
+      "id": "felo-web-felo-scholar",
+      "provider": "felo-web",
+      "status": 502,
+      "cat": "FAIL",
+      "content": "",
+      "finish": "",
+      "latency": 30.01,
+      "error": "{\"detail\":\"所有候选模型均失败: Post \\\"https://felo.ai/api/search/threads\\\": context deadline exceeded (Client.Timeout exceeded while awaiting headers)\"}"
+    },
+    {
+      "id": "felo-web-felo-social",
+      "provider": "felo-web",
+      "status": 502,
+      "cat": "FAIL",
+      "content": "",
+      "finish": "",
+      "latency": 30.02,
+      "error": "{\"detail\":\"所有候选模型均失败: Post \\\"https://felo.ai/api/search/threads\\\": context deadline exceeded (Client.Timeout exceeded while awaiting headers)\"}"
+    },
+    {
+      "id": "felo-web-felo-document",
+      "provider": "felo-web",
+      "status": 502,
+      "cat": "FAIL",
+      "content": "",
+      "finish": "",
+      "latency": 30.01,
+      "error": "{\"detail\":\"所有候选模型均失败: Post \\\"https://felo.ai/api/search/threads\\\": context deadline exceeded (Client.Timeout exceeded while awaiting headers)\"}"
+    }
+  ]
+}

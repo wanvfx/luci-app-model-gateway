@@ -245,12 +245,12 @@ func (p *Poller) probeAndRecord(prov *config.Provider, model string) {
 // checkModel 对单个模型做真实探测（与原 Python 1.6.1 check_model 一致）：
 // 先做别名解析，再 POST {BaseURL}/chat/completions（max_tokens=5、30s 超时）。
 // 逐模型独立结果、生成延迟真实可比；GET /models 仅用于 Key 校验，不再用于巡检
-//（端点级探活会导致每模型重复轰击 /models → 限流误报 + 所有模型共享一个结果）。
+// （端点级探活会导致每模型重复轰击 /models → 限流误报 + 所有模型共享一个结果）。
 // 第 4 个返回值为失败归因（成功时无意义），供熔断决定是否跳闸
 func (p *Poller) checkModel(prov *config.Provider, model string) (ok bool, detail string, latency time.Duration, kind FailKind) {
 	actual := model
 	if p.resolve != nil {
 		actual = p.resolve(model)
 	}
-	return ChatProbe(prov.BaseURL, prov.APIKey, actual, p.client)
+	return ChatProbe(prov, actual, p.client)
 }

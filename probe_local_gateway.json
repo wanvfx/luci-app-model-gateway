@@ -1,0 +1,320 @@
+{
+  "gateway": "http://192.168.100.1:12211",
+  "timestamp": "2026-08-01 22:29:27",
+  "elapsed_sec": 51.9,
+  "total": 89,
+  "ok": 33,
+  "empty": 2,
+  "fail": 54,
+  "ok_list": [
+    "NVIDIA-nvidia/llama-3.1-nemotron-nano-vl-8b-v1",
+    "256k",
+    "NVIDIA-meta/llama-3.2-11b-vision-instruct",
+    "NVIDIA-nvidia/nemotron-3-ultra-550b-a55b",
+    "NVIDIA-nvidia/nemotron-nano-12b-v2-vl",
+    "NVIDIA-nvidia/nemotron-3-super-120b-a12b",
+    "SenseNova-deepseek-v4-flash",
+    "SenseNova-glm-5.2",
+    "opencode-nemotron-3-ultra-free",
+    "opencode-big-pickle",
+    "opencode-deepseek-v4-flash-free",
+    "opencode-north-mini-code-free",
+    "NVIDIA-deepseek-ai/deepseek-v4-pro",
+    "uncloseai-solidrust/Hermes-3-Llama-3.1-8B-AWQ",
+    "NVIDIA-minimaxai/minimax-m3",
+    "opencode-mimo-v2.5-free",
+    "g4f-nvidia-nvidia/nemotron-3-nano-30b-a3b",
+    "ovhcloud-Qwen3-Coder-30B-A3B-Instruct",
+    "ovhcloud-Qwen2.5-VL-72B-Instruct",
+    "ovhcloud-gpt-oss-120b",
+    "ovhcloud-gpt-oss-20b",
+    "ovhcloud-Qwen3-32B",
+    "ovhcloud-Meta-Llama-3_3-70B-Instruct",
+    "ovhcloud-Mistral-Small-3.2-24B-Instruct-2506",
+    "ovhcloud-Mistral-Nemo-Instruct-2407",
+    "felo-web-felo-chat",
+    "felo-web-felo-search",
+    "1m",
+    "auto",
+    "felo-web-felo-scholar",
+    "felo-web-felo-social",
+    "ovhcloud-Mistral-7B-Instruct-v0.3",
+    "felo-web-felo-document"
+  ],
+  "empty_list": [
+    "SenseNova-sensenova-6.7-flash-lite",
+    "ovhcloud-Qwen3.5-9B"
+  ],
+  "fail_list": [
+    {
+      "model": "NVIDIA-deepseek-ai/deepseek-v4-flash",
+      "status": 502,
+      "error": "{\"detail\":\"所有候选模型均失败: upstream returned 529\"}"
+    },
+    {
+      "model": "识图",
+      "status": 502,
+      "error": "{\"detail\":\"所有候选模型均失败: upstream returned 400\"}"
+    },
+    {
+      "model": "魔搭-deepseek-ai/DeepSeek-V4-Flash",
+      "status": 502,
+      "error": "{\"detail\":\"所有候选模型均失败: upstream returned 400\"}"
+    },
+    {
+      "model": "魔搭-deepseek-ai/DeepSeek-V4-Pro",
+      "status": 502,
+      "error": "{\"detail\":\"所有候选模型均失败: upstream returned 400\"}"
+    },
+    {
+      "model": "魔搭-OpenGVLab/InternVL3_5-241B-A28B",
+      "status": 502,
+      "error": "{\"detail\":\"所有候选模型均失败: upstream returned 400\"}"
+    },
+    {
+      "model": "魔搭-PaddlePaddle/ERNIE-4.5-VL-28B-A3B-PT",
+      "status": 502,
+      "error": "{\"detail\":\"所有候选模型均失败: upstream returned 400\"}"
+    },
+    {
+      "model": "魔搭-Qwen/Qwen3-VL-8B-Instruct",
+      "status": 502,
+      "error": "{\"detail\":\"所有候选模型均失败: upstream returned 400\"}"
+    },
+    {
+      "model": "魔搭-Qwen/Qwen3-VL-8B-Thinking",
+      "status": 502,
+      "error": "{\"detail\":\"所有候选模型均失败: upstream returned 400\"}"
+    },
+    {
+      "model": "魔搭-Qwen/Qwen3.5-122B-A10B",
+      "status": 502,
+      "error": "{\"detail\":\"所有候选模型均失败: upstream returned 400\"}"
+    },
+    {
+      "model": "魔搭-Qwen/Qwen3.5-397B-A17B",
+      "status": 502,
+      "error": "{\"detail\":\"所有候选模型均失败: upstream returned 400\"}"
+    },
+    {
+      "model": "pollinations-gemini-large",
+      "status": 502,
+      "error": "{\"detail\":\"所有候选模型均失败: upstream returned 401\"}"
+    },
+    {
+      "model": "pollinations-minimax",
+      "status": 502,
+      "error": "{\"detail\":\"所有候选模型均失败: upstream returned 401\"}"
+    },
+    {
+      "model": "pollinations-midijourney-large",
+      "status": 502,
+      "error": "{\"detail\":\"所有候选模型均失败: upstream returned 401\"}"
+    },
+    {
+      "model": "pollinations-claude-large",
+      "status": 502,
+      "error": "{\"detail\":\"所有候选模型均失败: upstream returned 401\"}"
+    },
+    {
+      "model": "pollinations-perplexity-reasoning",
+      "status": 502,
+      "error": "{\"detail\":\"所有候选模型均失败: upstream returned 401\"}"
+    },
+    {
+      "model": "pollinations-kimi",
+      "status": 502,
+      "error": "{\"detail\":\"所有候选模型均失败: upstream returned 401\"}"
+    },
+    {
+      "model": "pollinations-nova",
+      "status": 502,
+      "error": "{\"detail\":\"所有候选模型均失败: upstream returned 401\"}"
+    },
+    {
+      "model": "pollinations-midijourney",
+      "status": 502,
+      "error": "{\"detail\":\"所有候选模型均失败: upstream returned 401\"}"
+    },
+    {
+      "model": "pollinations-qwen-vision",
+      "status": 502,
+      "error": "{\"detail\":\"所有候选模型均失败: upstream returned 401\"}"
+    },
+    {
+      "model": "pollinations-openai-large",
+      "status": 502,
+      "error": "{\"detail\":\"所有候选模型均失败: upstream returned 401\"}"
+    },
+    {
+      "model": "pollinations-mistral-large",
+      "status": 502,
+      "error": "{\"detail\":\"所有候选模型均失败: upstream returned 401\"}"
+    },
+    {
+      "model": "pollinations-mistral",
+      "status": 502,
+      "error": "{\"detail\":\"所有候选模型均失败: upstream returned 401\"}"
+    },
+    {
+      "model": "pollinations-deepseek",
+      "status": 502,
+      "error": "{\"detail\":\"所有候选模型均失败: upstream returned 401\"}"
+    },
+    {
+      "model": "pollinations-gemini-search",
+      "status": 502,
+      "error": "{\"detail\":\"所有候选模型均失败: upstream returned 401\"}"
+    },
+    {
+      "model": "pollinations-qwen-large",
+      "status": 502,
+      "error": "{\"detail\":\"所有候选模型均失败: upstream returned 401\"}"
+    },
+    {
+      "model": "pollinations-gemini",
+      "status": 502,
+      "error": "{\"detail\":\"所有候选模型均失败: upstream returned 401\"}"
+    },
+    {
+      "model": "pollinations-gemini-fast",
+      "status": 502,
+      "error": "{\"detail\":\"所有候选模型均失败: upstream returned 401\"}"
+    },
+    {
+      "model": "pollinations-claude",
+      "status": 502,
+      "error": "{\"detail\":\"所有候选模型均失败: upstream returned 401\"}"
+    },
+    {
+      "model": "pollinations-qwen-safety",
+      "status": 502,
+      "error": "{\"detail\":\"所有候选模型均失败: upstream returned 401\"}"
+    },
+    {
+      "model": "pollinations-openai-fast",
+      "status": 502,
+      "error": "{\"detail\":\"所有候选模型均失败: upstream returned 401\"}"
+    },
+    {
+      "model": "pollinations-qwen-coder",
+      "status": 502,
+      "error": "{\"detail\":\"所有候选模型均失败: upstream returned 401\"}"
+    },
+    {
+      "model": "pollinations-grok-large",
+      "status": 502,
+      "error": "{\"detail\":\"所有候选模型均失败: upstream returned 401\"}"
+    },
+    {
+      "model": "pollinations-claude-fast",
+      "status": 502,
+      "error": "{\"detail\":\"所有候选模型均失败: upstream returned 401\"}"
+    },
+    {
+      "model": "pollinations-perplexity-fast",
+      "status": 502,
+      "error": "{\"detail\":\"所有候选模型均失败: upstream returned 401\"}"
+    },
+    {
+      "model": "pollinations-nova-fast",
+      "status": 502,
+      "error": "{\"detail\":\"所有候选模型均失败: upstream returned 401\"}"
+    },
+    {
+      "model": "pollinations-glm",
+      "status": 502,
+      "error": "{\"detail\":\"所有候选模型均失败: upstream returned 401\"}"
+    },
+    {
+      "model": "pollinations-qwen-coder-large",
+      "status": 502,
+      "error": "{\"detail\":\"所有候选模型均失败: upstream returned 401\"}"
+    },
+    {
+      "model": "pollinations-openai",
+      "status": 502,
+      "error": "{\"detail\":\"所有候选模型均失败: upstream returned 401\"}"
+    },
+    {
+      "model": "duckduckgo-web-gpt-5.4-mini",
+      "status": 502,
+      "error": "{\"detail\":\"所有候选模型均失败: adapter duckduckgo preflight: preflight got no token (status=200)\"}"
+    },
+    {
+      "model": "duckduckgo-web-gpt-5.4-nano",
+      "status": 502,
+      "error": "{\"detail\":\"所有候选模型均失败: adapter duckduckgo preflight: preflight got no token (status=200)\"}"
+    },
+    {
+      "model": "duckduckgo-web-claude-haiku-4-5",
+      "status": 502,
+      "error": "{\"detail\":\"所有候选模型均失败: adapter duckduckgo preflight: preflight got no token (status=200)\"}"
+    },
+    {
+      "model": "duckduckgo-web-mistral-small-2603",
+      "status": 502,
+      "error": "{\"detail\":\"所有候选模型均失败: adapter duckduckgo preflight: preflight got no token (status=200)\"}"
+    },
+    {
+      "model": "duckduckgo-web-tinfoil/gpt-oss-120b",
+      "status": 502,
+      "error": "{\"detail\":\"所有候选模型均失败: adapter duckduckgo preflight: preflight got no token (status=200)\"}"
+    },
+    {
+      "model": "duckduckgo-web-tinfoil/gemma4-31b",
+      "status": 502,
+      "error": "{\"detail\":\"所有候选模型均失败: adapter duckduckgo preflight: preflight got no token (status=200)\"}"
+    },
+    {
+      "model": "g4f-nvidia-minimaxai/minimax-m2.7",
+      "status": 502,
+      "error": "{\"detail\":\"所有候选模型均失败: upstream returned 410\"}"
+    },
+    {
+      "model": "g4f-pollinations-openai",
+      "status": 502,
+      "error": "{\"detail\":\"所有候选模型均失败: upstream returned 401\"}"
+    },
+    {
+      "model": "g4f-pollinations-openai-fast",
+      "status": 502,
+      "error": "{\"detail\":\"所有候选模型均失败: upstream returned 401\"}"
+    },
+    {
+      "model": "g4f-groq-llama-3.3-70b-versatile",
+      "status": 502,
+      "error": "{\"detail\":\"所有候选模型均失败: upstream returned 403\"}"
+    },
+    {
+      "model": "g4f-groq-llama-3.1-8b-instant",
+      "status": 502,
+      "error": "{\"detail\":\"所有候选模型均失败: upstream returned 403\"}"
+    },
+    {
+      "model": "ovhcloud-Qwen3.5-397B-A17B",
+      "status": 502,
+      "error": "{\"detail\":\"所有候选模型均失败: upstream returned 429\"}"
+    },
+    {
+      "model": "ovhcloud-Qwen3.6-27B",
+      "status": 502,
+      "error": "{\"detail\":\"所有候选模型均失败: upstream returned 429\"}"
+    },
+    {
+      "model": "NVIDIA-z-ai/glm-5.2",
+      "status": 502,
+      "error": "{\"detail\":\"所有候选模型均失败: Post \\\"https://integrate.api.nvidia.com/v1/chat/completions\\\": context deadline exceeded (Client.T"
+    },
+    {
+      "model": "pollinations-grok",
+      "status": 502,
+      "error": "{\"detail\":\"所有候选模型均失败: Post \\\"https://gen.pollinations.ai/v1/chat/completions\\\": context deadline exceeded (Client.Timeou"
+    },
+    {
+      "model": "g4f-nvidia-z-ai/glm-5.2",
+      "status": 502,
+      "error": "{\"detail\":\"所有候选模型均失败: Post \\\"https://integrate.api.nvidia.com/v1/chat/completions\\\": net/http: timeout awaiting response"
+    }
+  ]
+}

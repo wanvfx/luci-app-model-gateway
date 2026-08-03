@@ -1,0 +1,221 @@
+=== 免Key提供者总数: 17 ===
+
+[pollinations] auth=optional
+   base=https://gen.pollinations.ai/v1
+   Health(/models): st=200 err=None snip=b'{"object":"list","data":[{"id":"openai","object":"model","created":1785499648610'
+   Chat(/chat/completions, model=openai): st=200 err=None snip=b'{"choices":[{"content_filter_results":{"hate":{"filtered":false,"severity":"safe'
+   >>> 判定: 真免Key可用
+
+[duckduckgo-web] auth=none
+   base=https://duckduckgo.com/duckchat/v1
+   Health(/models): st=None err=URLError: <urlopen error timed out> snip=b''
+   Chat(/chat/completions, model=gpt-5.4-mini): st=None err=URLError: <urlopen error [WinError 10060] 由于连接方在一段时间后没有正确答复或连接的主机没有反应，连接尝试失败。> snip=b''
+   >>> 判定: 连不上(非OpenAI兼容/端点不存在/需特殊协议)
+
+[opencode] auth=optional
+   base=https://opencode.ai/zen/v1
+   Health(/models): st=200 err=None snip=b'{"object":"list","data":[{"id":"claude-fable-5","object":"model","created":17854'
+   Chat(/chat/completions, model=big-pickle): st=200 err=None snip=b'{"id":"d15b3e54-cfd2-4866-a5eb-84f02301c278","object":"chat.completion","created'
+   >>> 判定: 真免Key可用
+
+[felo-web] auth=none
+   base=https://felo.ai/api-proxy/main/search/threads
+   Health(/models): st=None err=URLError: <urlopen error timed out> snip=b''
+   Chat(/chat/completions, model=felo-chat): st=None err=URLError: <urlopen error [WinError 10060] 由于连接方在一段时间后没有正确答复或连接的主机没有反应，连接尝试失败。> snip=b''
+   >>> 判定: 连不上(非OpenAI兼容/端点不存在/需特殊协议)
+
+[auggie] auth=none
+   base=auggie://cli/stdio
+   Health(/models): st=None err=URLError: <urlopen error unknown url type: auggie> snip=b''
+   Chat(/chat/completions, model=sonnet4.6): st=None err=URLError: <urlopen error unknown url type: auggie> snip=b''
+   >>> 判定: 本地CLI/stdio,HTTP代理不可达(架构限制)
+
+[g4f-nvidia] auth=optional
+   base=https://g4f.space/api/nvidia/v1
+   Health(/models): st=404 err=None snip=b'404 page not found\n'
+   Chat(/chat/completions, model=nvidia/nemotron-3-nano-30b-a3b): st=429 err=None snip=b'{"error":{"message":"Request limit (200 per day) exceeded. Made: 359 requests. S'
+   >>> 判定: 连不上(非OpenAI兼容/端点不存在/需特殊协议)
+
+[hackclub] auth=optional
+   base=https://ai.hackclub.com/proxy/v1
+   Health(/models): st=200 err=None snip=b'{"data":[{"id":"deepseek/deepseek-v4-flash-0731","canonical_slug":"deepseek/deep'
+   Chat(/chat/completions, model=meta-llama/llama-3.3-70b-instruct): st=401 err=None snip=b'Authentication required'
+   >>> 判定: 端点可达但/chat/completions不通(非OpenAI兼容)
+
+[uncloseai] auth=optional
+   base=https://hermes.ai.unturf.com/v1
+   Health(/models): st=200 err=None snip=b'{"object":"list","data":[{"id":"solidrust/Hermes-3-Llama-3.1-8B-AWQ","object":"m'
+   Chat(/chat/completions, model=adamo1139/Hermes-3-Llama-3.1-8B-FP8-Dynamic): st=404 err=None snip=b'{"error":{"message":"The model `adamo1139/Hermes-3-Llama-3.1-8B-FP8-Dynamic` doe'
+   >>> 判定: 端点可达但/chat/completions不通(非OpenAI兼容)
+
+[g4f-pollinations] auth=optional
+   base=https://g4f.space/api/pollinations/v1
+   Health(/models): st=200 err=None snip=b'{"object":"list","data":[{"id":"openai","object":"model","created":0,"owned_by":'
+   Chat(/chat/completions, model=openai): st=429 err=None snip=b'{"error":{"message":"Request limit (200 per day) exceeded. Made: 359 requests. S'
+   >>> 判定: 端点可达但/chat/completions不通(非OpenAI兼容)
+
+[g4f-groq] auth=optional
+   base=https://g4f.space/api/groq/v1
+   Health(/models): st=403 err=None snip=b'{"error":{"message":"Forbidden"}}'
+   Chat(/chat/completions, model=llama-3.3-70b-versatile): st=429 err=None snip=b'{"error":{"message":"Request limit (200 per day) exceeded. Made: 359 requests. S'
+   >>> 判定: 连不上(非OpenAI兼容/端点不存在/需特殊协议)
+
+[chipotle] auth=none
+   base=https://amelia.chipotle.com
+   Health(/models): st=404 err=None snip=b'<html>\r\n<head><title>404 Not Found</title></head>\r\n<body>\r\n<center><h1>404 Not F'
+   Chat(/chat/completions, model=pepper-1): st=404 err=None snip=b'<html>\r\n<head><title>404 Not Found</title></head>\r\n<body>\r\n<center><h1>404 Not F'
+   >>> 判定: 连不上(非OpenAI兼容/端点不存在/需特殊协议)
+
+[g4f-gemini] auth=optional
+   base=https://g4f.space/api/gemini/v1
+   Health(/models): st=200 err=None snip=b'{\n  "object": "list",\n  "data": [\n    {\n      "id": "models/gemini-2.5-flash",\n '
+   Chat(/chat/completions, model=models/gemini-2.5-flash): st=429 err=None snip=b'{"error":{"message":"Request limit (200 per day) exceeded. Made: 359 requests. S'
+   >>> 判定: 端点可达但/chat/completions不通(非OpenAI兼容)
+
+[g4f-ollama] auth=optional
+   base=https://g4f.space/api/ollama/v1
+   Health(/models): st=200 err=None snip=b'{"object":"list","data":[{"id":"glm-5.1","object":"model","created":1785499293,"'
+   Chat(/chat/completions, model=gemma3:4b): st=429 err=None snip=b'{"error":{"message":"Request limit (200 per day) exceeded. Made: 359 requests. S'
+   >>> 判定: 端点可达但/chat/completions不通(非OpenAI兼容)
+
+[mimocode] auth=none
+   base=https://api.xiaomimimo.com
+   Health(/models): st=404 err=None snip=b'<html>\r\n<head><title>404 Not Found</title></head>\r\n<body>\r\n<center><h1>404 Not F'
+Traceback (most recent call last):
+  File "C:\Users\Administrator\Downloads\model-gateway\luci-app-model-gateway\probe_keyfree.py", line 75, in <module>
+    print(f"   Chat(/chat/completions, model={first_model}): st={c_st} err={c_err} snip={c_snip[:80]!r}")
+                                                                                         ~~~~~~^^^^^
+TypeError: 'NoneType' object is not subscriptable
+=== 免Key提供者总数: 17 ===
+
+[pollinations] auth=optional
+   base=https://gen.pollinations.ai/v1
+   Health(/models): st=200 err=None snip=b'{"object":"list","data":[{"id":"openai","object":"model","created":1785499812338'
+   Chat(/chat/completions, model=openai): st=200 err=None snip=b'{"choices":[{"content_filter_results":{"hate":{"filtered":false,"severity":"safe'
+   >>> 判定: 真免Key可用
+
+[duckduckgo-web] auth=none
+   base=https://duckduckgo.com/duckchat/v1
+   Health(/models): st=None err=URLError: <urlopen error timed out> snip=b''
+   Chat(/chat/completions, model=gpt-5.4-mini): st=None err=URLError: <urlopen error [WinError 10060] 由于连接方在一段时间后没有正确答复或连接的主机没有反应，连接尝试失败。> snip=b''
+   >>> 判定: 连不上(非OpenAI兼容/端点不存在/需特殊协议)
+
+[opencode] auth=optional
+   base=https://opencode.ai/zen/v1
+   Health(/models): st=200 err=None snip=b'{"object":"list","data":[{"id":"claude-fable-5","object":"model","created":17854'
+   Chat(/chat/completions, model=big-pickle): st=200 err=None snip=b'{"id":"d50298f8-07a2-46c5-9d06-cfa662a474ab","object":"chat.completion","created'
+   >>> 判定: 真免Key可用
+
+[felo-web] auth=none
+   base=https://felo.ai/api-proxy/main/search/threads
+   Health(/models): st=None err=URLError: <urlopen error timed out> snip=b''
+   Chat(/chat/completions, model=felo-chat): st=None err=URLError: <urlopen error [WinError 10060] 由于连接方在一段时间后没有正确答复或连接的主机没有反应，连接尝试失败。> snip=b''
+   >>> 判定: 连不上(非OpenAI兼容/端点不存在/需特殊协议)
+
+[auggie] auth=none
+   base=auggie://cli/stdio
+   Health(/models): st=None err=URLError: <urlopen error unknown url type: auggie> snip=b''
+   Chat(/chat/completions, model=sonnet4.6): st=None err=URLError: <urlopen error unknown url type: auggie> snip=b''
+   >>> 判定: 本地CLI/stdio,HTTP代理不可达(架构限制)
+
+[g4f-nvidia] auth=optional
+   base=https://g4f.space/api/nvidia/v1
+   Health(/models): st=404 err=None snip=b'404 page not found\n'
+   Chat(/chat/completions, model=nvidia/nemotron-3-nano-30b-a3b): st=429 err=None snip=b'{"error":{"message":"Request limit (200 per day) exceeded. Made: 363 requests. S'
+   >>> 判定: 连不上(非OpenAI兼容/端点不存在/需特殊协议)
+
+[hackclub] auth=optional
+   base=https://ai.hackclub.com/proxy/v1
+   Health(/models): st=200 err=None snip=b'{"data":[{"id":"deepseek/deepseek-v4-flash-0731","canonical_slug":"deepseek/deep'
+   Chat(/chat/completions, model=meta-llama/llama-3.3-70b-instruct): st=401 err=None snip=b'Authentication required'
+   >>> 判定: 端点可达但/chat/completions不通(非OpenAI兼容)
+
+[uncloseai] auth=optional
+   base=https://hermes.ai.unturf.com/v1
+   Health(/models): st=200 err=None snip=b'{"object":"list","data":[{"id":"solidrust/Hermes-3-Llama-3.1-8B-AWQ","object":"m'
+   Chat(/chat/completions, model=adamo1139/Hermes-3-Llama-3.1-8B-FP8-Dynamic): st=404 err=None snip=b'{"error":{"message":"The model `adamo1139/Hermes-3-Llama-3.1-8B-FP8-Dynamic` doe'
+   >>> 判定: 端点可达但/chat/completions不通(非OpenAI兼容)
+
+[g4f-pollinations] auth=optional
+   base=https://g4f.space/api/pollinations/v1
+   Health(/models): st=200 err=None snip=b'{"object":"list","data":[{"id":"openai","object":"model","created":0,"owned_by":'
+   Chat(/chat/completions, model=openai): st=429 err=None snip=b'{"error":{"message":"Request limit (200 per day) exceeded. Made: 363 requests. S'
+   >>> 判定: 端点可达但/chat/completions不通(非OpenAI兼容)
+
+[g4f-groq] auth=optional
+   base=https://g4f.space/api/groq/v1
+   Health(/models): st=403 err=None snip=b'{"error":{"message":"Forbidden"}}'
+   Chat(/chat/completions, model=llama-3.3-70b-versatile): st=429 err=None snip=b'{"error":{"message":"Request limit (200 per day) exceeded. Made: 364 requests. S'
+   >>> 判定: 连不上(非OpenAI兼容/端点不存在/需特殊协议)
+
+[chipotle] auth=none
+   base=https://amelia.chipotle.com
+   Health(/models): st=404 err=None snip=b'<html>\r\n<head><title>404 Not Found</title></head>\r\n<body>\r\n<center><h1>404 Not F'
+   Chat(/chat/completions, model=pepper-1): st=404 err=None snip=b'<html>\r\n<head><title>404 Not Found</title></head>\r\n<body>\r\n<center><h1>404 Not F'
+   >>> 判定: 连不上(非OpenAI兼容/端点不存在/需特殊协议)
+
+[g4f-gemini] auth=optional
+   base=https://g4f.space/api/gemini/v1
+   Health(/models): st=200 err=None snip=b'{\n  "object": "list",\n  "data": [\n    {\n      "id": "models/gemini-2.5-flash",\n '
+   Chat(/chat/completions, model=models/gemini-2.5-flash): st=429 err=None snip=b'{"error":{"message":"Request limit (200 per day) exceeded. Made: 364 requests. S'
+   >>> 判定: 端点可达但/chat/completions不通(非OpenAI兼容)
+
+[g4f-ollama] auth=optional
+   base=https://g4f.space/api/ollama/v1
+   Health(/models): st=200 err=None snip=b'{"object":"list","data":[{"id":"glm-5.1","object":"model","created":1785498636,"'
+   Chat(/chat/completions, model=gemma3:4b): st=429 err=None snip=b'{"error":{"message":"Request limit (200 per day) exceeded. Made: 364 requests. S'
+   >>> 判定: 端点可达但/chat/completions不通(非OpenAI兼容)
+
+[mimocode] auth=none
+   base=https://api.xiaomimimo.com
+   Health(/models): st=404 err=None snip=b'<html>\r\n<head><title>404 Not Found</title></head>\r\n<body>\r\n<center><h1>404 Not F'
+   Chat(/chat/completions, model=None): st=None err=None snip=b''
+   >>> 判定: 无模型(目录缺模型)
+
+[ovhcloud] auth=optional
+   base=https://oai.endpoints.kepler.ai.cloud.ovh.net/v1
+   Health(/models): st=200 err=None snip=b'{"object":"list","data":[{"id":"stable-diffusion-xl-base-v10","created":17302975'
+   Chat(/chat/completions, model=None): st=None err=None snip=b''
+   >>> 判定: 无模型(目录缺模型)
+
+[theoldllm] auth=none
+   base=https://theoldllm.vercel.app/api/chatgpt
+   Health(/models): st=None err=URLError: <urlopen error timed out> snip=b''
+   Chat(/chat/completions, model=GPT_5_4): st=None err=URLError: <urlopen error [WinError 10060] 由于连接方在一段时间后没有正确答复或连接的主机没有反应，连接尝试失败。> snip=b''
+   >>> 判定: 连不上(非OpenAI兼容/端点不存在/需特殊协议)
+
+[veoaifree-web] auth=none
+   base=https://veoaifree.com/wp-admin/admin-ajax.php
+   Health(/models): st=403 err=None snip=b'<!DOCTYPE html><html lang="en-US"><head><title>Just a moment...</title><meta htt'
+   Chat(/chat/completions, model=veo): st=403 err=None snip=b'<!DOCTYPE html><html lang="en-US"><head><title>Just a moment...</title><meta htt'
+   >>> 判定: 连不上(非OpenAI兼容/端点不存在/需特殊协议)
+
+=== pollinations 重复探测(评估SLA可用性) ===
+  probe#1: st=None err=URLError: <urlopen error _ssl.c:1015: The handshake operation timed out> snip=b''
+  probe#2: st=200 err=None snip=b'{"choices":[{"content_filter_results":{"hate":{"filtered":fa'
+  probe#3: st=200 err=None snip=b'{"choices":[{"content_filter_results":{"hate":{"filtered":fa'
+  probe#4: st=None err=TimeoutError: The read operation timed out snip=b''
+  probe#5: st=None err=URLError: <urlopen error [WinError 10060] 由于连接方在一段时间后没有正确答复或连接的主机没有反应，连接尝试失败。> snip=b''
+  probe#6: st=None err=URLError: <urlopen error [WinError 10060] 由于连接方在一段时间后没有正确答复或连接的主机没有反应，连接尝试失败。> snip=b''
+  probe#7: st=None err=URLError: <urlopen error [WinError 10060] 由于连接方在一段时间后没有正确答复或连接的主机没有反应，连接尝试失败。> snip=b''
+  probe#8: st=None err=URLError: <urlopen error [WinError 10060] 由于连接方在一段时间后没有正确答复或连接的主机没有反应，连接尝试失败。> snip=b''
+  pollinations 可用率 ≈ 2/8 = 25.0%
+
+=== 汇总判定 ===
+  pollinations       真免Key可用
+  duckduckgo-web     连不上(非OpenAI兼容/端点不存在/需特殊协议)
+  opencode           真免Key可用
+  felo-web           连不上(非OpenAI兼容/端点不存在/需特殊协议)
+  auggie             本地CLI/stdio,HTTP代理不可达(架构限制)
+  g4f-nvidia         连不上(非OpenAI兼容/端点不存在/需特殊协议)
+  hackclub           端点可达但/chat/completions不通(非OpenAI兼容)
+  uncloseai          端点可达但/chat/completions不通(非OpenAI兼容)
+  g4f-pollinations   端点可达但/chat/completions不通(非OpenAI兼容)
+  g4f-groq           连不上(非OpenAI兼容/端点不存在/需特殊协议)
+  chipotle           连不上(非OpenAI兼容/端点不存在/需特殊协议)
+  g4f-gemini         端点可达但/chat/completions不通(非OpenAI兼容)
+  g4f-ollama         端点可达但/chat/completions不通(非OpenAI兼容)
+  mimocode           无模型(目录缺模型)
+  ovhcloud           无模型(目录缺模型)
+  theoldllm          连不上(非OpenAI兼容/端点不存在/需特殊协议)
+  veoaifree-web      连不上(非OpenAI兼容/端点不存在/需特殊协议)

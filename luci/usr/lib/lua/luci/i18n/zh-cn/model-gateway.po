@@ -1,0 +1,110 @@
+msgid ""
+msgstr "Content-Type: text/plain; charset=UTF-8"
+
+msgid "Model Gateway"
+msgstr "Model Gateway"
+
+msgid "Model Gateway 是 OpenAI 兼容的 AI 模型网关，把 NVIDIA、商汤、魔搭、Gemini 等平台的免费额度聚合成统一接口，支持自动故障转移与质量/延迟加权路由。"
+msgstr "Model Gateway 是 OpenAI 兼容的 AI 模型网关，把 NVIDIA、商汤、魔搭、Gemini 等平台的免费额度聚合成统一接口，支持自动故障转移与质量/延迟加权路由。"
+
+msgid "Service Control"
+msgstr "服务控制"
+
+msgid "Start"
+msgstr "启动"
+
+msgid "Stop"
+msgstr "停止"
+
+msgid "Restart"
+msgstr "重启"
+
+msgid "Basic Settings"
+msgstr "基础设置"
+
+msgid "Port"
+msgstr "端口"
+
+msgid "Admin Key"
+msgstr "管理密钥"
+
+msgid "Optional. If set, the admin panel uses this key instead of the client API key, preventing LAN devices from tampering with upstream config."
+msgstr "可选。若设置，管理面板将使用此密钥而非客户端 API Key，防止局域网内其他设备篡改上游配置。"
+
+msgid "Poll Interval (seconds)"
+msgstr "巡检间隔（秒）"
+
+msgid "Service listening port (default: 8080)"
+msgstr "服务监听端口（默认：8080）"
+
+msgid "Health check interval in seconds (default: 300)"
+msgstr "健康巡检间隔，单位秒（默认：300）"
+
+msgid "Headless Mode"
+msgstr "无头模式"
+
+msgid "Yes"
+msgstr "是"
+
+msgid "No"
+msgstr "否"
+
+msgid "Disable browser opening and other desktop features"
+msgstr "禁用浏览器打开等桌面功能"
+
+msgid "Vision Router"
+msgstr "视觉路由组"
+
+msgid "Router name for vision models (auto-route when image detected)"
+msgstr "视觉模型路由组名（检测到图片时自动路由）"
+
+msgid "Providers"
+msgstr "提供商"
+
+msgid "Routers"
+msgstr "路由组"
+
+msgid "Name"
+msgstr "名称"
+
+msgid "Base URL"
+msgstr "基础地址"
+
+msgid "API Key"
+msgstr "API 密钥"
+
+msgid "Enabled"
+msgstr "启用"
+
+msgid "Members"
+msgstr "成员"
+
+msgid "Service Status"
+msgstr "服务状态"
+
+msgid "Model Gateway status:"
+msgstr "Model Gateway 的状态信息如下："
+
+msgid "Model Gateway is running"
+msgstr "Model Gateway 运行中"
+
+msgid "Model Gateway is not running"
+msgstr "Model Gateway 未运行"
+
+msgid "Open Model Gateway"
+msgstr "打开 Model Gateway"
+
+msgid "The free space of Docker is less than 2GB, which may cause the installation to fail."
+msgstr "Docker 可用空间已不足2GB，可能导致安装失败。"
+
+msgid "seconds"
+msgstr "秒"
+
+msgid "Open"
+msgstr "打开"
+
+msgid "Setup"
+msgstr "安装配置"
+
+msgid "The following parameters will only take effect during installation or upgrade:"
+msgstr "以下参数只在安装或者升级时才会生效："

@@ -14,11 +14,36 @@ import (
 // UCITool UCI 配置操作工具
 type UCITool struct {
 	configName string
+	dir        string // S6：可配置 uci 工作目录（如 /etc/config），为空则使用默认 PATH
 }
 
 // NewUCITool 创建 UCI 工具
 func NewUCITool(configName string) *UCITool {
 	return &UCITool{configName: configName}
+}
+
+// SetDir 设置 uci 配置目录（P3-6: 改用 -c <dir> 参数，不再用 cmd.Dir）
+func (u *UCITool) SetDir(dir string) {
+	u.dir = dir
+}
+
+// execCommand 执行 uci 子命令（P3-6: uci 不读 cwd，用 -c <dir> 指定配置目录）
+func (u *UCITool) execCommand(name string, args ...string) *exec.Cmd {
+	if u.dir != "" {
+		// 在 args 最前面插入 -c <dir>（uci 所有子命令均支持 -c）
+		args = append([]string{"-c", u.dir}, args...)
+	}
+	return exec.Command(name, args...)
+}
+
+// checkUCI 检查 uci 命令是否可用（S6：缺失时显式报错，避免静默失败）
+func (u *UCITool) checkUCI() error {
+	cmd := u.execCommand("uci", "--version")
+	out, err := cmd.CombinedOutput()
+	if err != nil {
+		return fmt.Errorf("uci command not found or not executable: %v, output: %s", err, string(out))
+	}
+	return nil
 }
 
 // ref 构造一个合法的 UCI 段/选项引用。
@@ -34,17 +59,71 @@ func (u *UCITool) ref(sectionType, sectionName string) string {
 	return u.configName + "." + sectionType
 }
 
-// escapeUCIValue 转义单引号，供 uci batch 的单引号包裹使用。
+// escapeUCIValue 转义供 UCI 写入使用的值（P2-1 / P2-3）。
+// 1) 单引号 → '\”（UCI 标准转义，供单引号包裹或 uci set 解析）；
+// 2) 真实换行/回车 → \n / \r 字面（防止逃逸单引号包裹执行任意 uci 子命令，P2-1）；
+// 3) 反斜杠 → \\ ，保证与 unescapeUCIValue 严格互逆（含 `\`、`\n` 等既存字面）。
 func escapeUCIValue(v string) string {
-	return strings.ReplaceAll(v, "'", `'\''`)
+	v = strings.ReplaceAll(v, `\`, `\\`)
+	v = strings.ReplaceAll(v, "'", `'\''`)
+	v = strings.ReplaceAll(v, "\n", `\n`)
+	v = strings.ReplaceAll(v, "\r", `\r`)
+	return v
+}
+
+// unescapeUCIValue 还原 uci show 输出中被转义的值（P2-2 修复）。
+// uci 对含特殊字符的值用单引号包裹，内部单引号转义为 '\”。
+// 例如存储值 it's 在 `uci show` 中输出为 'it'\”s'，
+// 旧实现 strings.Trim(..., "'\"") 仅剥掉首尾引号，残留内部 '\” 导致值被错误截断。
+// 这里先按引号规则剥壳，再把内部的 '\” 还原为单引号。
+// P2-3：与 escapeUCIValue 严格互逆——按序列单遍扫描还原 \\  \n  \r，
+// 避免 ReplaceAll 顺序问题导致「字面反斜杠+n」与「真实换行」无法区分。
+func unescapeUCIValue(v string) string {
+	v = strings.TrimSpace(v)
+	inQuote := false
+	if len(v) >= 2 && v[0] == '\'' && v[len(v)-1] == '\'' {
+		inQuote = true
+		v = v[1 : len(v)-1]
+	} else if len(v) >= 2 && v[0] == '"' && v[len(v)-1] == '"' {
+		v = v[1 : len(v)-1]
+	}
+	// 单引号包裹下：先还原内部转义引号 '\'' -> '（字面反斜杠已被 escape 写成 \\，不会误伤）
+	if inQuote {
+		v = strings.ReplaceAll(v, `'\''`, "'")
+	}
+	// 单遍扫描还原反斜杠转义序列（\\ \n \r），其余原样
+	var b strings.Builder
+	b.Grow(len(v))
+	for i := 0; i < len(v); i++ {
+		if v[i] == '\\' && i+1 < len(v) {
+			switch v[i+1] {
+			case '\\':
+				b.WriteByte('\\')
+				i++
+				continue
+			case 'n':
+				b.WriteByte('\n')
+				i++
+				continue
+			case 'r':
+				b.WriteByte('\r')
+				i++
+				continue
+			}
+		}
+		b.WriteByte(v[i])
+	}
+	return b.String()
 }
 
 // SetOption 设置单个 option
 // 段引用统一走 ref()：命名段 → config.name，匿名/类型 → config.type，
 // 严禁拼出 config.type.name 的非法 4 段引用（历史 bug #03 / 铁律 #27）
 func (u *UCITool) SetOption(sectionType, sectionName, key, value string) error {
-	cmd := exec.Command("uci", "set", fmt.Sprintf("%s.%s=%s", u.ref(sectionType, sectionName), key, value))
-	cmd.Dir = "/etc/config"
+	if err := u.checkUCI(); err != nil {
+		return err
+	}
+	cmd := u.execCommand("uci", "set", fmt.Sprintf("%s.%s=%s", u.ref(sectionType, sectionName), key, escapeUCIValue(value)))
 	out, err := cmd.CombinedOutput()
 	if err != nil {
 		return fmt.Errorf("uci set failed: %v, output: %s", err, string(out))
@@ -56,14 +135,12 @@ func (u *UCITool) SetOption(sectionType, sectionName, key, value string) error {
 func (u *UCITool) SetList(sectionType, sectionName, key string, values []string) error {
 	ref := u.ref(sectionType, sectionName)
 	// 删除旧值
-	cmd := exec.Command("uci", "delete", fmt.Sprintf("%s.%s", ref, key))
-	cmd.Dir = "/etc/config"
+	cmd := u.execCommand("uci", "delete", fmt.Sprintf("%s.%s", ref, key))
 	cmd.Run() // 忽略删除错误（可能不存在）
 
 	// 添加新值
 	for _, v := range values {
-		cmd = exec.Command("uci", "add_list", fmt.Sprintf("%s.%s=%s", ref, key, v))
-		cmd.Dir = "/etc/config"
+		cmd = u.execCommand("uci", "add_list", fmt.Sprintf("%s.%s=%s", ref, key, escapeUCIValue(v)))
 		out, err := cmd.CombinedOutput()
 		if err != nil {
 			return fmt.Errorf("uci add_list failed: %v, output: %s", err, string(out))
@@ -74,8 +151,7 @@ func (u *UCITool) SetList(sectionType, sectionName, key string, values []string)
 
 // AddSection 添加新 section
 func (u *UCITool) AddSection(sectionType string) (string, error) {
-	cmd := exec.Command("uci", "add", u.configName, sectionType)
-	cmd.Dir = "/etc/config"
+	cmd := u.execCommand("uci", "add", u.configName, sectionType)
 	out, err := cmd.CombinedOutput()
 	if err != nil {
 		return "", fmt.Errorf("uci add failed: %v, output: %s", err, string(out))
@@ -141,12 +217,90 @@ func (u *UCITool) DeleteSections(ids []string) error {
 	}
 	buf.WriteString(fmt.Sprintf("commit %s\n", u.configName))
 
-	cmd := exec.Command("uci", "batch")
-	cmd.Dir = "/etc/config"
+	cmd := u.execCommand("uci", "batch")
 	cmd.Stdin = strings.NewReader(buf.String())
 	out, err := cmd.CombinedOutput()
 	if err != nil {
 		return fmt.Errorf("uci batch delete failed: %v, output: %s", err, string(out))
+	}
+	return nil
+}
+
+// ReplaceSectionsAtomic 原子地全量替换指定类型的所有 section（P2-5）。
+// 在单个 uci batch 内完成「先删除旧段 → 逐条 add 新段并设置 option/list → 一次 commit」，
+// 彻底避免「先删后建、各自单独 commit」在中途失败时留下的半删半建中间态。
+// 每个 items 元素含 options（单值）+ lists（list 字段），均可为空。
+// 删除顺序复用 DeleteSections 的（匿名段倒序、命名段最后）策略，防索引漂移。
+type ReplaceItem struct {
+	Options map[string]string
+	Lists   map[string][]string
+}
+
+func (u *UCITool) ReplaceSectionsAtomic(sectionType string, items []ReplaceItem) error {
+	var buf bytes.Buffer
+
+	// 1) 收集并排序待删除的旧段（匿名段倒序在前，命名段在后）
+	oldIDs, err := u.GetSectionNames(sectionType)
+	if err != nil {
+		return err
+	}
+	type sectionEntry struct {
+		id     string
+		isAnon bool
+		index  int
+	}
+	entries := make([]sectionEntry, 0, len(oldIDs))
+	for _, id := range oldIDs {
+		id = strings.TrimSpace(id)
+		if id == "" {
+			continue
+		}
+		idx := strings.Index(id, "[")
+		if idx >= 0 {
+			if end := strings.Index(id[idx:], "]"); end >= 0 {
+				if n, perr := strconv.Atoi(id[idx+1 : idx+end]); perr == nil {
+					entries = append(entries, sectionEntry{id, true, n})
+					continue
+				}
+			}
+		}
+		entries = append(entries, sectionEntry{id, false, 0})
+	}
+	sort.SliceStable(entries, func(i, j int) bool {
+		if entries[i].isAnon != entries[j].isAnon {
+			return entries[i].isAnon
+		}
+		if entries[i].isAnon {
+			return entries[i].index > entries[j].index
+		}
+		return false
+	})
+	for _, e := range entries {
+		buf.WriteString(fmt.Sprintf("delete %s.%s\n", u.configName, e.id))
+	}
+
+	// 2) 逐条 add 新段（匿名段用 @type[-1] 指向上一个刚 add 的）
+	for _, it := range items {
+		buf.WriteString(fmt.Sprintf("add %s %s\n", u.configName, sectionType))
+		ref := fmt.Sprintf("%s.@%s[-1]", u.configName, sectionType)
+		for k, v := range it.Options {
+			buf.WriteString(fmt.Sprintf("set %s.%s='%s'\n", ref, k, escapeUCIValue(v)))
+		}
+		for k, vals := range it.Lists {
+			for _, v := range vals {
+				buf.WriteString(fmt.Sprintf("add_list %s.%s='%s'\n", ref, k, escapeUCIValue(v)))
+			}
+		}
+	}
+
+	// 3) 单次 commit
+	buf.WriteString(fmt.Sprintf("commit %s\n", u.configName))
+
+	cmd := u.execCommand("uci", "batch")
+	cmd.Stdin = strings.NewReader(buf.String())
+	out, err := cmd.CombinedOutput()
+	if err != nil {
+		return fmt.Errorf("uci batch replace failed: %v, output: %s", err, string(out))
 	}
 	return nil
 }
@@ -179,8 +333,7 @@ func (u *UCITool) DeleteSectionsByName(sectionType, name string) (int, error) {
 
 // Commit 提交配置更改
 func (u *UCITool) Commit() error {
-	cmd := exec.Command("uci", "commit", u.configName)
-	cmd.Dir = "/etc/config"
+	cmd := u.execCommand("uci", "commit", u.configName)
 	out, err := cmd.CombinedOutput()
 	if err != nil {
 		return fmt.Errorf("uci commit failed: %v, output: %s", err, string(out))
@@ -190,8 +343,7 @@ func (u *UCITool) Commit() error {
 
 // GetConfig 获取当前配置（返回原始文本）
 func (u *UCITool) GetConfig() (string, error) {
-	cmd := exec.Command("uci", "show", u.configName)
-	cmd.Dir = "/etc/config"
+	cmd := u.execCommand("uci", "show", u.configName)
 	out, err := cmd.CombinedOutput()
 	if err != nil {
 		return "", fmt.Errorf("uci show failed: %v, output: %s", err, string(out))
@@ -204,8 +356,7 @@ func (u *UCITool) GetConfig() (string, error) {
 // 因此需要从输出的第一行提取解析后的前缀，而不是用原始引用做前缀匹配。
 func (u *UCITool) GetOptions(sectionType, sectionName string) (map[string]string, error) {
 	sref := u.ref(sectionType, sectionName)
-	cmd := exec.Command("uci", "show", sref)
-	cmd.Dir = "/etc/config"
+	cmd := u.execCommand("uci", "show", sref)
 	out, err := cmd.CombinedOutput()
 	if err != nil {
 		return nil, fmt.Errorf("uci show failed: %v, output: %s", err, string(out))
@@ -247,7 +398,7 @@ func (u *UCITool) GetOptions(sectionType, sectionName string) (map[string]string
 			continue
 		}
 		key := strings.TrimSpace(kv[0])
-		value := strings.Trim(strings.TrimSpace(kv[1]), "'\"")
+		value := unescapeUCIValue(kv[1])
 		if key != "" {
 			result[key] = value
 		}
@@ -257,8 +408,7 @@ func (u *UCITool) GetOptions(sectionType, sectionName string) (map[string]string
 
 // GetLists 获取指定 section 的 list 项
 func (u *UCITool) GetLists(sectionType, sectionName, key string) ([]string, error) {
-	cmd := exec.Command("uci", "get", fmt.Sprintf("%s.%s", u.ref(sectionType, sectionName), key))
-	cmd.Dir = "/etc/config"
+	cmd := u.execCommand("uci", "get", fmt.Sprintf("%s.%s", u.ref(sectionType, sectionName), key))
 	out, err := cmd.CombinedOutput()
 	if err != nil {
 		// 可能不存在，返回空列表
@@ -271,7 +421,7 @@ func (u *UCITool) GetLists(sectionType, sectionName, key string) ([]string, erro
 	// uci get 对 list 返回单行、以空格分隔多个值
 	var result []string
 	for _, tok := range strings.Fields(string(out)) {
-		tok = strings.Trim(tok, "'\"")
+		tok = unescapeUCIValue(tok)
 		if tok != "" {
 			result = append(result, tok)
 		}
@@ -342,8 +492,7 @@ func (u *UCITool) ToMap() (map[string]interface{}, error) {
 // 注意：uci show 对匿名段只输出 @type[index] 格式，不会输出 cfgXXXX，
 // 因此这里必须保留 @type[index] 格式，否则匿名段会被跳过导致删除/枚举失效。
 func (u *UCITool) GetSectionNames(sectionType string) ([]string, error) {
-	cmd := exec.Command("uci", "show", u.configName)
-	cmd.Dir = "/etc/config"
+	cmd := u.execCommand("uci", "show", u.configName)
 	out, err := cmd.CombinedOutput()
 	if err != nil {
 		return nil, fmt.Errorf("uci show failed: %v, output: %s", err, string(out))
@@ -391,8 +540,7 @@ func (u *UCITool) AddSectionWithOptions(sectionType string, options map[string]s
 	}
 	buf.WriteString(fmt.Sprintf("commit %s\n", u.configName))
 
-	cmd := exec.Command("uci", "batch")
-	cmd.Dir = "/etc/config"
+	cmd := u.execCommand("uci", "batch")
 	cmd.Stdin = strings.NewReader(buf.String())
 	out, err := cmd.CombinedOutput()
 	if err != nil {
@@ -432,8 +580,7 @@ func (u *UCITool) RestoreConfig(backupPath string) error {
 		}
 
 		// 执行 uci set
-		cmd := exec.Command("uci", "set", line)
-		cmd.Dir = "/etc/config"
+		cmd := u.execCommand("uci", "set", line)
 		if out, err := cmd.CombinedOutput(); err != nil {
 			return fmt.Errorf("restore failed on line '%s': %v, output: %s", line, err, string(out))
 		}
@@ -486,8 +633,7 @@ func (u *UCITool) DiffConfig(other *UCITool) ([]string, error) {
 // ValidateConfig 验证配置是否合法
 func (u *UCITool) ValidateConfig() error {
 	// 检查配置是否可以被解析
-	cmd := exec.Command("uci", "show", u.configName)
-	cmd.Dir = "/etc/config"
+	cmd := u.execCommand("uci", "show", u.configName)
 	out, err := cmd.CombinedOutput()
 	if err != nil {
 		return fmt.Errorf("config validation failed: %v, output: %s", err, string(out))
@@ -503,8 +649,7 @@ func (u *UCITool) ValidateConfig() error {
 
 // GetOption 获取单个 option 的值
 func (u *UCITool) GetOption(sectionType, sectionName, key string) (string, error) {
-	cmd := exec.Command("uci", "get", fmt.Sprintf("%s.%s", u.ref(sectionType, sectionName), key))
-	cmd.Dir = "/etc/config"
+	cmd := u.execCommand("uci", "get", fmt.Sprintf("%s.%s", u.ref(sectionType, sectionName), key))
 	out, err := cmd.CombinedOutput()
 	if err != nil {
 		return "", fmt.Errorf("uci get failed: %v, output: %s", err, string(out))
@@ -514,8 +659,7 @@ func (u *UCITool) GetOption(sectionType, sectionName, key string) (string, error
 
 // SetOptionWithCommit 设置 option 并提交
 func (u *UCITool) SetOptionWithCommit(sectionType, sectionName, key, value string) error {
-	cmd := exec.Command("uci", "set", fmt.Sprintf("%s.%s=%s", u.ref(sectionType, sectionName), key, value))
-	cmd.Dir = "/etc/config"
+	cmd := u.execCommand("uci", "set", fmt.Sprintf("%s.%s=%s", u.ref(sectionType, sectionName), key, escapeUCIValue(value)))
 	out, err := cmd.CombinedOutput()
 	if err != nil {
 		return fmt.Errorf("uci set failed: %v, output: %s", err, string(out))
@@ -525,8 +669,7 @@ func (u *UCITool) SetOptionWithCommit(sectionType, sectionName, key, value strin
 
 // DeleteOption 删除 option
 func (u *UCITool) DeleteOption(sectionType, sectionName, key string) error {
-	cmd := exec.Command("uci", "delete", fmt.Sprintf("%s.%s", u.ref(sectionType, sectionName), key))
-	cmd.Dir = "/etc/config"
+	cmd := u.execCommand("uci", "delete", fmt.Sprintf("%s.%s", u.ref(sectionType, sectionName), key))
 	out, err := cmd.CombinedOutput()
 	if err != nil {
 		return fmt.Errorf("uci delete failed: %v, output: %s", err, string(out))
@@ -536,8 +679,7 @@ func (u *UCITool) DeleteOption(sectionType, sectionName, key string) error {
 
 // AddListItem 添加 list 项
 func (u *UCITool) AddListItem(sectionType, sectionName, key, value string) error {
-	cmd := exec.Command("uci", "add_list", fmt.Sprintf("%s.%s=%s", u.ref(sectionType, sectionName), key, value))
-	cmd.Dir = "/etc/config"
+	cmd := u.execCommand("uci", "add_list", fmt.Sprintf("%s.%s=%s", u.ref(sectionType, sectionName), key, escapeUCIValue(value)))
 	out, err := cmd.CombinedOutput()
 	if err != nil {
 		return fmt.Errorf("uci add_list failed: %v, output: %s", err, string(out))
@@ -547,8 +689,7 @@ func (u *UCITool) AddListItem(sectionType, sectionName, key, value string) error
 
 // DeleteListItem 删除 list 项
 func (u *UCITool) DeleteListItem(sectionType, sectionName, key, value string) error {
-	cmd := exec.Command("uci", "del_list", fmt.Sprintf("%s.%s=%s", u.ref(sectionType, sectionName), key, value))
-	cmd.Dir = "/etc/config"
+	cmd := u.execCommand("uci", "del_list", fmt.Sprintf("%s.%s=%s", u.ref(sectionType, sectionName), key, escapeUCIValue(value)))
 	out, err := cmd.CombinedOutput()
 	if err != nil {
 		return fmt.Errorf("uci del_list failed: %v, output: %s", err, string(out))
@@ -558,8 +699,7 @@ func (u *UCITool) DeleteListItem(sectionType, sectionName, key, value string) er
 
 // PurgeConfig 清空配置（删除所有 section）
 func (u *UCITool) PurgeConfig() error {
-	cmd := exec.Command("uci", "delete", u.configName)
-	cmd.Dir = "/etc/config"
+	cmd := u.execCommand("uci", "delete", u.configName)
 	out, err := cmd.CombinedOutput()
 	if err != nil {
 		return fmt.Errorf("uci delete failed: %v, output: %s", err, string(out))
@@ -590,8 +730,7 @@ func (u *UCITool) ImportConfig(filePath string) error {
 		if line == "" || strings.HasPrefix(line, "#") {
 			continue
 		}
-		cmd := exec.Command("uci", "set", line)
-		cmd.Dir = "/etc/config"
+		cmd := u.execCommand("uci", "set", line)
 		if out, err := cmd.CombinedOutput(); err != nil {
 			return fmt.Errorf("import failed on line '%s': %v, output: %s", line, err, string(out))
 		}
@@ -636,15 +775,13 @@ func (u *UCITool) FromJSON(jsonData string) error {
 				// 处理数组（list）
 				for _, item := range val {
 					if str, ok := item.(string); ok {
-						cmd := exec.Command("uci", "add_list", fmt.Sprintf("%s.%s", u.configName, fullKey)+"="+str)
-						cmd.Dir = "/etc/config"
+						cmd := u.execCommand("uci", "add_list", fmt.Sprintf("%s.%s", u.configName, fullKey)+"="+escapeUCIValue(str))
 						cmd.Run()
 					}
 				}
 			default:
 				// 设置值
-				cmd := exec.Command("uci", "set", fmt.Sprintf("%s.%s=%v", u.configName, fullKey, v))
-				cmd.Dir = "/etc/config"
+				cmd := u.execCommand("uci", "set", fmt.Sprintf("%s.%s=%v", u.configName, fullKey, escapeUCIValue(fmt.Sprintf("%v", v))))
 				cmd.Run()
 			}
 		}
@@ -657,8 +794,7 @@ func (u *UCITool) FromJSON(jsonData string) error {
 // ExecCommand 执行任意 uci 命令
 func (u *UCITool) ExecCommand(args ...string) (string, error) {
 	args = append([]string{"-c", u.configName}, args...)
-	cmd := exec.Command("uci", args...)
-	cmd.Dir = "/etc/config"
+	cmd := u.execCommand("uci", args...)
 	out, err := cmd.CombinedOutput()
 	if err != nil {
 		return "", fmt.Errorf("uci command failed: %v, output: %s", err, string(out))
@@ -676,8 +812,7 @@ func (u *UCITool) BatchSetOptions(sectionType, sectionName string, options map[s
 	}
 	buf.WriteString(fmt.Sprintf("commit %s\n", u.configName))
 
-	cmd := exec.Command("uci", "batch")
-	cmd.Dir = "/etc/config"
+	cmd := u.execCommand("uci", "batch")
 	cmd.Stdin = strings.NewReader(buf.String())
 	out, err := cmd.CombinedOutput()
 	if err != nil {

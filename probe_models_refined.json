@@ -1,0 +1,234 @@
+[
+  {
+    "id": "SenseNova-glm-5.2",
+    "status": 502,
+    "ok": false,
+    "content": "",
+    "finish": "",
+    "latency": 0.64
+  },
+  {
+    "id": "NVIDIA-meta/llama-3.2-11b-vision-instruct",
+    "status": 200,
+    "ok": true,
+    "content": "🤖 NVIDIA · meta/llama-3.2-11b-vision-instruct\n\n嗨",
+    "finish": "stop",
+    "latency": 0.8
+  },
+  {
+    "id": "SenseNova-sensenova-6.7-flash-lite",
+    "status": 200,
+    "ok": false,
+    "content": "",
+    "finish": "length",
+    "latency": 2.09
+  },
+  {
+    "id": "NVIDIA-nvidia/nemotron-3-super-120b-a12b",
+    "status": 200,
+    "ok": true,
+    "content": "🤖 NVIDIA · nvidia/nemotron-3-super-120b-a12b\n\n你好",
+    "finish": "stop",
+    "latency": 2.57
+  },
+  {
+    "id": "NVIDIA-nvidia/llama-3.1-nemotron-nano-vl-8b-v1",
+    "status": 200,
+    "ok": true,
+    "content": "🤖 NVIDIA · nvidia/llama-3.1-nemotron-nano-vl-8b-v1\n\n你好。",
+    "finish": "stop",
+    "latency": 3.02
+  },
+  {
+    "id": "SenseNova-deepseek-v4-flash",
+    "status": 200,
+    "ok": true,
+    "content": "🤖 SenseNova · deepseek-v4-flash\n\n你好",
+    "finish": "stop",
+    "latency": 3.08
+  },
+  {
+    "id": "opencode-nemotron-3-ultra-free",
+    "status": 200,
+    "ok": true,
+    "content": "🤖 opencode · nemotron-3-ultra-free\n\n你好",
+    "finish": "stop",
+    "latency": 2.99
+  },
+  {
+    "id": "opencode-mimo-v2.5-free",
+    "status": 200,
+    "ok": true,
+    "content": "🤖 opencode · mimo-v2.5-free\n\n你好",
+    "finish": "stop",
+    "latency": 3.06
+  },
+  {
+    "id": "NVIDIA-nvidia/nemotron-nano-12b-v2-vl",
+    "status": 200,
+    "ok": true,
+    "content": "🤖 NVIDIA · nvidia/nemotron-nano-12b-v2-vl\n\n你好\n",
+    "finish": "stop",
+    "latency": 3.48
+  },
+  {
+    "id": "opencode-deepseek-v4-flash-free",
+    "status": 200,
+    "ok": true,
+    "content": "🤖 opencode · deepseek-v4-flash-free\n\n你好",
+    "finish": "stop",
+    "latency": 3.04
+  },
+  {
+    "id": "256k",
+    "status": 200,
+    "ok": true,
+    "content": "🤖 NVIDIA · nvidia/nemotron-3-super-120b-a12b\n\n你好",
+    "finish": "stop",
+    "latency": 4.26
+  },
+  {
+    "id": "opencode-big-pickle",
+    "status": 200,
+    "ok": true,
+    "content": "🤖 opencode · big-pickle\n\nHello",
+    "finish": "stop",
+    "latency": 2.35
+  },
+  {
+    "id": "g4f-nvidia-z-ai/glm-5.2",
+    "status": 200,
+    "ok": true,
+    "content": "🤖 g4f-nvidia · z-ai/glm-5.2\n\n你好。",
+    "finish": "stop",
+    "latency": 0.77
+  },
+  {
+    "id": "uncloseai-solidrust/Hermes-3-Llama-3.1-8B-AWQ",
+    "status": 200,
+    "ok": true,
+    "content": "🤖 uncloseai · solidrust/Hermes-3-Llama-3.1-8B-AWQ\n\n你好。",
+    "finish": "stop",
+    "latency": 4.2
+  },
+  {
+    "id": "NVIDIA-deepseek-ai/deepseek-v4-pro",
+    "status": 200,
+    "ok": true,
+    "content": "🤖 NVIDIA · deepseek-ai/deepseek-v4-pro\n\n好",
+    "finish": "stop",
+    "latency": 1.26
+  },
+  {
+    "id": "NVIDIA-nvidia/nemotron-3-ultra-550b-a55b",
+    "status": 200,
+    "ok": true,
+    "content": "🤖 NVIDIA · nvidia/nemotron-3-ultra-550b-a55b\n\n你好",
+    "finish": "stop",
+    "latency": 5.51
+  },
+  {
+    "id": "NVIDIA-deepseek-ai/deepseek-v4-flash",
+    "status": 200,
+    "ok": true,
+    "content": "🤖 NVIDIA · deepseek-ai/deepseek-v4-flash\n\nHello",
+    "finish": "stop",
+    "latency": 1.26
+  },
+  {
+    "id": "1m",
+    "status": 200,
+    "ok": true,
+    "content": "🤖 NVIDIA · deepseek-ai/deepseek-v4-pro\n\n好",
+    "finish": "stop",
+    "latency": 5.9
+  },
+  {
+    "id": "ovhcloud-Qwen3-32B",
+    "status": 502,
+    "ok": false,
+    "content": "",
+    "finish": "",
+    "latency": 2.99
+  },
+  {
+    "id": "ovhcloud-Mistral-Nemo-Instruct-2407",
+    "status": 200,
+    "ok": true,
+    "content": "🤖 ovhcloud · Mistral-Nemo-Instruct-2407\n\nHello",
+    "finish": "stop",
+    "latency": 2.59
+  },
+  {
+    "id": "auto",
+    "status": 200,
+    "ok": true,
+    "content": "🤖 NVIDIA · z-ai/glm-5.2\n\n你好。",
+    "finish": "stop",
+    "latency": 6.14
+  },
+  {
+    "id": "ovhcloud-Qwen2.5-VL-72B-Instruct",
+    "status": 200,
+    "ok": true,
+    "content": "🤖 ovhcloud · Qwen2.5-VL-72B-Instruct\n\n你好",
+    "finish": "stop",
+    "latency": 2.86
+  },
+  {
+    "id": "opencode-north-mini-code-free",
+    "status": 200,
+    "ok": true,
+    "content": "🤖 opencode · north-mini-code-free\n\n你好",
+    "finish": "stop",
+    "latency": 5.47
+  },
+  {
+    "id": "pollinations-openai",
+    "status": 502,
+    "ok": false,
+    "content": "",
+    "finish": "",
+    "latency": 2.9
+  },
+  {
+    "id": "ovhcloud-Qwen3.5-397B-A17B",
+    "status": 200,
+    "ok": false,
+    "content": "",
+    "finish": "length",
+    "latency": 5.26
+  },
+  {
+    "id": "NVIDIA-z-ai/glm-5.2",
+    "status": 200,
+    "ok": true,
+    "content": "🤖 NVIDIA · z-ai/glm-5.2\n\n你好。",
+    "finish": "stop",
+    "latency": 8.2
+  },
+  {
+    "id": "ovhcloud-Qwen3.5-9B",
+    "status": 200,
+    "ok": false,
+    "content": "",
+    "finish": "length",
+    "latency": 8.85
+  },
+  {
+    "id": "duckduckgo-web-gpt-5.4-mini",
+    "status": 502,
+    "ok": false,
+    "content": "",
+    "finish": "",
+    "latency": 30.01
+  },
+  {
+    "id": "felo-web-felo-chat",
+    "status": 502,
+    "ok": false,
+    "content": "",
+    "finish": "",
+    "latency": 30.01
+  }
+]

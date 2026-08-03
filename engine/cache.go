@@ -8,6 +8,7 @@ import (
 	"path/filepath"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"time"
 )
 
@@ -121,6 +122,11 @@ func (c *ResponseCache) Stats() CacheStats {
 	c.mu.RLock()
 	defer c.mu.RUnlock()
 	s := c.stats
+	// 计数器经 atomic 写入，读也用 atomic.Load 避免与并发写产生 data race
+	s.Hits = atomic.LoadInt64(&c.stats.Hits)
+	s.Misses = atomic.LoadInt64(&c.stats.Misses)
+	s.SemanticHits = atomic.LoadInt64(&c.stats.SemanticHits)
+	s.Puts = atomic.LoadInt64(&c.stats.Puts)
 	s.Entries = len(c.exact)
 	return s
 }
@@ -228,19 +234,19 @@ func hamming(a, b uint64) int {
 
 // GetContent 查询缓存：先精确，再（若开启语义）simhash 近重复。
 // 返回 (内容, 是否命中, 是否语义命中)
-// 并发安全修复：本方法会更新 stats 计数（读-改-写），必须持写锁；
-// 此前在 RLock 下 ++stats 是真实 data race（go test -race 可复现）。
+// P1-8：stats 计数改用 atomic 操作，读路径降级为 RLock，避免高并发读下的写锁瓶颈
+// （此前在 RLock 下 ++stats 是真实 data race，故被迫用写锁；现 atomic 化后读锁即可）。
 func (c *ResponseCache) GetContent(model, exactKey, promptNorm string) (string, bool, bool) {
-	c.mu.Lock()
-	defer c.mu.Unlock()
+	c.mu.RLock()
+	defer c.mu.RUnlock()
 	if !c.enabled {
-		c.stats.Misses++
+		atomic.AddInt64(&c.stats.Misses, 1)
 		return "", false, false
 	}
 	// 1. 精确命中
 	if e, ok := c.exact[exactKey]; ok {
 		if c.ttl <= 0 || time.Now().Unix()-e.CreatedAt <= int64(c.ttl) {
-			c.stats.Hits++
+			atomic.AddInt64(&c.stats.Hits, 1)
 			return e.Content, true, false
 		}
 	}
@@ -255,13 +261,13 @@ func (c *ResponseCache) GetContent(model, exactKey, promptNorm string) (string, 
 				continue
 			}
 			if hamming(sh, e.Simhash) <= c.hamming {
-				c.stats.Hits++
-				c.stats.SemanticHits++
+				atomic.AddInt64(&c.stats.Hits, 1)
+				atomic.AddInt64(&c.stats.SemanticHits, 1)
 				return e.Content, true, true
 			}
 		}
 	}
-	c.stats.Misses++
+	atomic.AddInt64(&c.stats.Misses, 1)
 	return "", false, false
 }
 
@@ -287,7 +293,7 @@ func (c *ResponseCache) PutContent(model, exactKey, promptNorm, content string, 
 		sh := e.Simhash
 		c.simIndex[sh] = append(c.simIndex[sh], e)
 	}
-	c.stats.Puts++
+	atomic.AddInt64(&c.stats.Puts, 1)
 	// 容量裁剪：超过 max 时丢弃最旧
 	if len(c.exact) > c.max {
 		c.evictOldest()

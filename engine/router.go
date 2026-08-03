@@ -21,8 +21,12 @@ type Router struct {
 	strategies map[string]string   // groupName -> strategy（空 = quality）
 	weights    map[string][]int    // groupName -> 成员权重（weighted 策略用）
 	scorer     *Scorer
-	catalog    *Catalog        // 模型参考库（cost 策略用，可为 nil）
-	penalty    *PenaltyTracker // 动态惩罚追踪器（可为 nil；priority 策略不参与降权）
+	catalog    *Catalog         // 模型参考库（cost 策略用，可为 nil）
+	penalty    *PenaltyTracker  // 动态惩罚追踪器（可为 nil；priority 策略不参与降权）
+	circuits   *CircuitPool     // 熔断器池（C4 锁定降权用，可为 nil）
+	cooldown   *CooldownTracker // 精确冷却追踪器（C1，可为 nil）
+	lastGood   *LastGoodTracker // 末次成功优先（C2，可为 nil）
+	affinity   *SessionAffinity // 会话亲和（C3，可为 nil）
 	rrMu       sync.Mutex
 	rrCounters map[string]uint64 // groupName -> 轮转计数（loadbalance 策略用）
 }
@@ -46,6 +50,26 @@ func (r *Router) SetCatalog(c *Catalog) {
 // SetPenalty 注入动态惩罚追踪器（近期频繁 429/5xx 的成员临时降权到队尾）
 func (r *Router) SetPenalty(p *PenaltyTracker) {
 	r.penalty = p
+}
+
+// SetCircuitPool 注入熔断器池（C4 锁定降权 / 状态查询用）
+func (r *Router) SetCircuitPool(cp *CircuitPool) {
+	r.circuits = cp
+}
+
+// SetCooldown 注入精确冷却追踪器（C1）
+func (r *Router) SetCooldown(c *CooldownTracker) {
+	r.cooldown = c
+}
+
+// SetLKGP 注入末次成功优先追踪器（C2）
+func (r *Router) SetLKGP(t *LastGoodTracker) {
+	r.lastGood = t
+}
+
+// SetAffinity 注入会话亲和追踪器（C3）
+func (r *Router) SetAffinity(a *SessionAffinity) {
+	r.affinity = a
 }
 
 // SetWeights 设置路由组成员权重（weighted 策略；与 members 一一对应）
@@ -84,9 +108,14 @@ func (r *Router) IsRouter(model string) bool {
 
 // PickOptions 选候选时的附加选项（第二批扩展：严格能力矩阵 + 内容分类路由）
 type PickOptions struct {
-	Strict       bool     // 严格能力矩阵：候选必须全部具备 RequiredCaps
-	RequiredCaps []string // 请求所需能力（如 vision），来自请求解析
-	Content      string   // 请求正文（内容分类路由 classify 策略用）
+	Strict            bool     // 严格能力矩阵：候选必须全部具备 RequiredCaps
+	RequiredCaps      []string // 请求所需能力（如 vision），来自请求解析
+	Content           string   // 请求正文（内容分类路由 classify 策略用）
+	PreferredProvider string   // 会话亲和（C3）：会话已绑定的 provider，优先前置
+	// CheapFirst 预算降级（A3）：当日成本已达告警线/超预算但未拦截（action=warn）时置 true，
+	// 在既有策略排序之上再做一次「免费/低价优先」重排，让后续请求自动落到便宜档，
+	// 而不是继续烧贵模型。只重排不过滤——保证候选集合不变，失败仍可 failover。
+	CheapFirst bool
 }
 
 // PickCandidates 挑选候选模型
@@ -122,7 +151,7 @@ func (r *Router) pickCandidates(model string, providers []*config.Provider, disa
 			return r.pickCandidates(target, providers, disabled, opts, depth+1)
 		}
 		// 路由组：按组策略排序成员（quality/priority/least-latency/cost/loadbalance/weighted）
-		ordered := r.orderMembers(model, members)
+		ordered := r.orderMembers(model, members, providers, opts)
 		var result []*Candidate
 		for _, m := range ordered {
 			// 过滤禁用模型
@@ -130,6 +159,10 @@ func (r *Router) pickCandidates(model string, providers []*config.Provider, disa
 				continue
 			}
 			provider, realModel := findProviderByModel(m, providers)
+			if provider == nil {
+				// 候选 provider 不在可用集（如被安全封禁）：跳过，避免空 provider 被选中
+				continue
+			}
 			if realModel == "" {
 				realModel = m
 			}
@@ -144,6 +177,9 @@ func (r *Router) pickCandidates(model string, providers []*config.Provider, disa
 			// fallback: 全部成员（不过滤，保留原始行为）
 			for _, m := range members {
 				provider, realModel := findProviderByModel(m, providers)
+				if provider == nil {
+					continue
+				}
 				if realModel == "" {
 					realModel = m
 				}
@@ -221,19 +257,123 @@ func (r *Router) filterCapabilities(cands []*Candidate, opts PickOptions) []*Can
 //   - loadbalance：每次请求轮转起点（简单均衡分摊）
 //   - weighted：按权重随机抽首选（A/B 灰度分流），其余按权重降序作 failover
 //
-// 除 priority（用户显式顺序神圣不可动）外，最终结果再经动态惩罚降权：
-// 近期频繁 429/5xx 的成员被临时挪到队尾，恢复后自动回位。
-func (r *Router) orderMembers(group string, members []string) []string {
+// 除 priority（用户显式顺序神圣不可动）外，最终结果再经 C 阶段弹性调整：
+//   - C3 会话亲和：偏好 provider 前置（仅当该候选未冷却/未锁定）
+//   - C1/C4 动态惩罚 + 精确冷却 + 模型锁定：受影响的成员被临时挪到队尾（只降权不过滤）
+func (r *Router) orderMembers(group string, members []string, providers []*config.Provider, opts PickOptions) []string {
 	strategy := r.Strategy(group)
-	out := r.orderByStrategy(group, strategy, members)
-	if strategy != "priority" && r.penalty != nil {
-		out = r.penalty.Demote(out)
+	out := r.orderByStrategy(group, strategy, members, providers)
+	if strategy == "priority" {
+		// 用户显式顺序神圣不可动（C 阶段弹性降权也不干预）。
+		// 唯一例外：A3 预算降级——超预算属于用户自己设的硬性成本约束，
+		// 此时把便宜档前置比死守拖拽顺序更符合用户真实意图。
+		return r.applyBudgetDegrade(out, opts)
+	}
+	// C3 会话亲和：偏好的 provider 前置（不锁定，仅当未冷却/未锁定时）
+	out = r.applyAffinity(out, providers, opts)
+	// C1/C4 弹性降权：冷却中/锁定中/受罚中 的候选挪到队尾（只降权不过滤，对齐熔断铁律）
+	out = r.demoteUnhealthy(group, out, providers)
+	// A3 预算降级：放在最后一步，优先级高于策略排序（成本兜底是硬约束）
+	out = r.applyBudgetDegrade(out, opts)
+	return out
+}
+
+// applyBudgetDegrade 预算超额自动降级（A3）。
+// 触发条件：opts.CheapFirst（由 proxy 层依据 Budget.Status 判定 warn/exceeded 且未拦截时置位）。
+// 行为：按参考库价格（PriceIn+PriceOut）稳定升序重排，免费模型（price=0）天然最前；
+// 未收录价格的模型排到已知价格之后（未知成本视为潜在昂贵，保守处理）。
+// 只重排不删除候选，保证所有 failover 路径仍然可用。
+func (r *Router) applyBudgetDegrade(members []string, opts PickOptions) []string {
+	if !opts.CheapFirst || len(members) < 2 || r.catalog == nil {
+		return members
+	}
+	type item struct {
+		model string
+		price float64
+		known bool
+	}
+	items := make([]item, 0, len(members))
+	for _, m := range members {
+		it := item{model: m}
+		if e := r.catalog.Lookup(m); e != nil {
+			it.price = e.PriceIn + e.PriceOut
+			it.known = true
+		}
+		items = append(items, it)
+	}
+	sort.SliceStable(items, func(i, j int) bool {
+		if items[i].known != items[j].known {
+			return items[i].known
+		}
+		return items[i].price < items[j].price
+	})
+	out := make([]string, len(items))
+	for i, it := range items {
+		out[i] = it.model
 	}
 	return out
 }
 
+// applyAffinity 会话亲和（C3）：若请求携带偏好 provider（来自 X-Session-Id 绑定），
+// 将其成员前置；若该候选正在冷却/锁定则不作前置（让位于健康候选）。
+func (r *Router) applyAffinity(members []string, providers []*config.Provider, opts PickOptions) []string {
+	if opts.PreferredProvider == "" || r.affinity == nil || len(members) < 2 {
+		return members
+	}
+	pref := opts.PreferredProvider
+	for i, m := range members {
+		prov, realModel := findProviderByModel(m, providers)
+		if prov == nil || prov.Name != pref {
+			continue
+		}
+		// 该候选若正在冷却/锁定，则不前置（仍走正常降权）
+		if r.circuits != nil && r.circuits.Locked(prov.Name+"||"+realModel) {
+			continue
+		}
+		if r.cooldown != nil && r.cooldown.Active(prov.Name+"-"+realModel) {
+			continue
+		}
+		if i == 0 {
+			return members
+		}
+		return append([]string{m}, append(append([]string{}, members[:i]...), members[i+1:]...)...)
+	}
+	return members
+}
+
+// demoteUnhealthy 将处于冷却/锁定/惩罚状态的成员稳定移至队尾（只降权不过滤，铁律）。
+// 排序优先级（越严重越靠后）：clean > cool(冷却) > pen(惩罚) > lock(锁定)。
+func (r *Router) demoteUnhealthy(group string, members []string, providers []*config.Provider) []string {
+	if r.penalty == nil && r.cooldown == nil && r.circuits == nil {
+		return members
+	}
+	var clean, cool, lock, pen []string
+	for _, m := range members {
+		prov, realModel := findProviderByModel(m, providers)
+		var ck, pk string
+		if prov != nil {
+			ck = prov.Name + "||" + realModel
+			pk = prov.Name + "-" + realModel
+		}
+		switch {
+		case r.circuits != nil && ck != "" && r.circuits.Locked(ck):
+			lock = append(lock, m)
+		case r.cooldown != nil && pk != "" && r.cooldown.Active(pk):
+			cool = append(cool, m)
+		case r.penalty != nil && (r.penalty.Penalized(pk) || r.penalty.Penalized(m)):
+			pen = append(pen, m)
+		default:
+			clean = append(clean, m)
+		}
+	}
+	if len(lock)+len(cool)+len(pen) == 0 {
+		return members
+	}
+	return append(append(append(clean, cool...), pen...), lock...)
+}
+
 // orderByStrategy 按策略排序（不含惩罚降权）
-func (r *Router) orderByStrategy(group, strategy string, members []string) []string {
+func (r *Router) orderByStrategy(group, strategy string, members []string, providers []*config.Provider) []string {
 	switch strategy {
 	case "priority":
 		// 严格按用户排列的顺序（核心修复：不再被 scorer.Rank 重排）
@@ -322,6 +462,21 @@ func (r *Router) orderByStrategy(group, strategy string, members []string) []str
 			return out
 		}
 		scores := r.scorer.Rank(members)
+		// C2 LKGP：末次成功 provider 小幅加权（+5，满分 100），只做平手裁决，
+		// 不盖过健康度/延迟主排序（protect provider 仍排在更健康的候选之后）。
+		if r.lastGood != nil {
+			if lg := r.lastGood.Get(group); lg != "" {
+				for i := range scores {
+					if prov, _ := findProviderByModel(scores[i].Model, providers); prov != nil && prov.Name == lg {
+						scores[i].Score += LKGPExtraBoost
+					}
+				}
+				// 加权后按分数稳定重排（仅影响平手裁决，不撑破主排序）
+				sort.SliceStable(scores, func(i, j int) bool {
+					return scores[i].Score > scores[j].Score
+				})
+			}
+		}
 		out := make([]string, 0, len(scores))
 		for _, s := range scores {
 			if !s.Available {

@@ -1,42 +1,5328 @@
 {
-  "version": 1,
-  "models": {
-    "deepseek-v4-flash": { "tier": "mid", "capabilities": ["text", "reasoning"], "context_length": 1048576, "price_in": 0.14, "price_out": 0.28, "family": "deepseek" },
-    "deepseek-v4-pro": { "tier": "top", "capabilities": ["text", "reasoning"], "context_length": 1048576, "price_in": 0.55, "price_out": 2.19, "family": "deepseek" },
-    "glm-5.2": { "tier": "top", "capabilities": ["text", "reasoning"], "context_length": 1048576, "price_in": 0.6, "price_out": 2.2, "family": "glm" },
-    "glm-5.2-free": { "tier": "mid", "capabilities": ["text", "reasoning"], "context_length": 1048576, "price_in": 0, "price_out": 0, "family": "glm" },
-    "glm-5.1": { "tier": "mid", "capabilities": ["text"], "context_length": 131072, "price_in": 0.35, "price_out": 1.4, "family": "glm" },
-    "kimi-k2.6": { "tier": "top", "capabilities": ["text", "reasoning"], "context_length": 262144, "price_in": 0.6, "price_out": 2.5, "family": "kimi" },
-    "minimax-m3": { "tier": "top", "capabilities": ["text", "reasoning"], "context_length": 1048576, "price_in": 0.5, "price_out": 2.0, "family": "minimax" },
-    "minimax-m2.7": { "tier": "mid", "capabilities": ["text"], "context_length": 204800, "price_in": 0.3, "price_out": 1.2, "family": "minimax" },
-    "qwen3.5-122b-a10b": { "tier": "mid", "capabilities": ["text", "reasoning"], "context_length": 262144, "price_in": 0.2, "price_out": 0.8, "family": "qwen" },
-    "qwen3.5-397b-a17b": { "tier": "top", "capabilities": ["text", "reasoning"], "context_length": 262144, "price_in": 0.6, "price_out": 2.4, "family": "qwen" },
-    "gemini-3.5-flash": { "tier": "mid", "capabilities": ["text", "vision", "reasoning"], "context_length": 1048576, "price_in": 0.3, "price_out": 1.2, "family": "gemini" },
-    "gpt-oss-120b": { "tier": "mid", "capabilities": ["text", "reasoning"], "context_length": 131072, "price_in": 0.1, "price_out": 0.5, "family": "gpt-oss" },
-    "mistral-small-4-119b-2603": { "tier": "mid", "capabilities": ["text", "vision"], "context_length": 262144, "price_in": 0.1, "price_out": 0.3, "family": "mistral" },
-    "mistral-large-3-675b-instruct-2512": { "tier": "top", "capabilities": ["text", "vision", "reasoning"], "context_length": 262144, "price_in": 2.0, "price_out": 6.0, "family": "mistral" },
-    "mistral-medium-3.5-128b": { "tier": "mid", "capabilities": ["text"], "context_length": 262144, "price_in": 0.4, "price_out": 2.0, "family": "mistral" },
-    "nemotron-3-super-120b-a12b": { "tier": "mid", "capabilities": ["text", "reasoning"], "context_length": 262144, "price_in": 0, "price_out": 0, "family": "nemotron" },
-    "nemotron-3-ultra-550b-a55b": { "tier": "top", "capabilities": ["text", "reasoning"], "context_length": 262144, "price_in": 0, "price_out": 0, "family": "nemotron" },
-    "nemotron-nano-12b-v2-vl": { "tier": "lite", "capabilities": ["text", "vision"], "context_length": 131072, "price_in": 0, "price_out": 0, "family": "nemotron" },
-    "llama-3.1-nemotron-nano-vl-8b-v1": { "tier": "lite", "capabilities": ["text", "vision"], "context_length": 131072, "price_in": 0, "price_out": 0, "family": "nemotron" },
-    "llama-3.2-11b-vision-instruct": { "tier": "lite", "capabilities": ["text", "vision"], "context_length": 131072, "price_in": 0, "price_out": 0, "family": "llama" },
-    "sensenova-6.7-flash-lite": { "tier": "lite", "capabilities": ["text", "vision"], "context_length": 131072, "price_in": 0, "price_out": 0, "family": "sensenova" },
-    "sensenova-u1-fast": { "tier": "lite", "capabilities": ["text", "vision"], "context_length": 32768, "price_in": 0, "price_out": 0, "family": "sensenova" },
-    "internvl3_5-241b-a28b": { "tier": "mid", "capabilities": ["text", "vision"], "context_length": 32768, "price_in": 0, "price_out": 0, "family": "internvl" },
-    "qwen3-vl-8b-thinking": { "tier": "lite", "capabilities": ["text", "vision", "reasoning"], "context_length": 262144, "price_in": 0, "price_out": 0, "family": "qwen" },
-    "qwen3-vl-8b-instruct": { "tier": "lite", "capabilities": ["text", "vision"], "context_length": 262144, "price_in": 0, "price_out": 0, "family": "qwen" },
-    "ernie-4.5-vl-28b-a3b-pt": { "tier": "lite", "capabilities": ["text", "vision"], "context_length": 32768, "price_in": 0, "price_out": 0, "family": "ernie" }
+ "version": 1,
+ "models": {
+  "deepseek-v4-flash": {
+   "tier": "mid",
+   "capabilities": [
+    "text",
+    "reasoning"
+   ],
+   "context_length": 1048576,
+   "price_in": 0.14,
+   "price_out": 0.28,
+   "family": "deepseek"
   },
-  "rules": [
-    { "contains": ["-vl", "vision", "-vl-", "internvl"], "tier": "", "capabilities": ["text", "vision"] },
-    { "contains": ["think", "reason", "-r1", "-r2"], "capabilities": ["text", "reasoning"] },
-    { "contains": ["embed", "bge-", "e5-"], "capabilities": ["embedding"], "tier": "lite" },
-    { "contains": ["tts", "asr", "whisper", "audio"], "capabilities": ["audio"], "tier": "lite" },
-    { "contains": ["image", "flux", "sdxl", "stable-diffusion", "dall-e", "seedream"], "capabilities": ["image"], "tier": "mid" },
-    { "contains": ["nano", "mini", "lite", "tiny", "-1b", "-2b", "-3b", "-4b", "-7b", "-8b", "-9b"], "tier": "lite" },
-    { "contains": ["flash", "small", "medium", "-12b", "-14b", "-24b", "-27b", "-32b", "-70b", "-72b"], "tier": "mid" },
-    { "contains": ["ultra", "large", "pro", "max", "-235b", "-405b", "-550b", "-675b"], "tier": "top" },
-    { "contains": [":free", "-free", "_free"], "price_in": 0, "price_out": 0 }
-  ]
+  "deepseek-v4-pro": {
+   "tier": "top",
+   "capabilities": [
+    "text",
+    "reasoning"
+   ],
+   "context_length": 1048576,
+   "price_in": 0.55,
+   "price_out": 2.19,
+   "family": "deepseek"
+  },
+  "glm-5.2": {
+   "tier": "top",
+   "capabilities": [
+    "text",
+    "reasoning"
+   ],
+   "context_length": 1048576,
+   "price_in": 0.6,
+   "price_out": 2.2,
+   "family": "glm"
+  },
+  "glm-5.2-free": {
+   "tier": "mid",
+   "capabilities": [
+    "text",
+    "reasoning"
+   ],
+   "context_length": 1048576,
+   "price_in": 0,
+   "price_out": 0,
+   "family": "glm"
+  },
+  "glm-5.1": {
+   "tier": "mid",
+   "capabilities": [
+    "text"
+   ],
+   "context_length": 131072,
+   "price_in": 0.35,
+   "price_out": 1.4,
+   "family": "glm"
+  },
+  "kimi-k2.6": {
+   "tier": "top",
+   "capabilities": [
+    "text",
+    "reasoning"
+   ],
+   "context_length": 262144,
+   "price_in": 0.6,
+   "price_out": 2.5,
+   "family": "kimi"
+  },
+  "minimax-m3": {
+   "tier": "top",
+   "capabilities": [
+    "text",
+    "reasoning"
+   ],
+   "context_length": 1048576,
+   "price_in": 0.5,
+   "price_out": 2.0,
+   "family": "minimax"
+  },
+  "minimax-m2.7": {
+   "tier": "mid",
+   "capabilities": [
+    "text"
+   ],
+   "context_length": 204800,
+   "price_in": 0.3,
+   "price_out": 1.2,
+   "family": "minimax"
+  },
+  "qwen3.5-122b-a10b": {
+   "tier": "mid",
+   "capabilities": [
+    "text",
+    "reasoning"
+   ],
+   "context_length": 262144,
+   "price_in": 0.2,
+   "price_out": 0.8,
+   "family": "qwen"
+  },
+  "qwen3.5-397b-a17b": {
+   "tier": "top",
+   "capabilities": [
+    "text",
+    "reasoning"
+   ],
+   "context_length": 262144,
+   "price_in": 0.6,
+   "price_out": 2.4,
+   "family": "qwen"
+  },
+  "gemini-3.5-flash": {
+   "tier": "mid",
+   "capabilities": [
+    "text",
+    "vision",
+    "reasoning"
+   ],
+   "context_length": 1048576,
+   "price_in": 0.3,
+   "price_out": 1.2,
+   "family": "gemini"
+  },
+  "gpt-oss-120b": {
+   "tier": "mid",
+   "capabilities": [
+    "text",
+    "reasoning"
+   ],
+   "context_length": 131072,
+   "price_in": 0.1,
+   "price_out": 0.5,
+   "family": "gpt-oss"
+  },
+  "mistral-small-4-119b-2603": {
+   "tier": "mid",
+   "capabilities": [
+    "text",
+    "vision"
+   ],
+   "context_length": 262144,
+   "price_in": 0.1,
+   "price_out": 0.3,
+   "family": "mistral"
+  },
+  "mistral-large-3-675b-instruct-2512": {
+   "tier": "top",
+   "capabilities": [
+    "text",
+    "vision",
+    "reasoning"
+   ],
+   "context_length": 262144,
+   "price_in": 2.0,
+   "price_out": 6.0,
+   "family": "mistral"
+  },
+  "mistral-medium-3.5-128b": {
+   "tier": "mid",
+   "capabilities": [
+    "text"
+   ],
+   "context_length": 262144,
+   "price_in": 0.4,
+   "price_out": 2.0,
+   "family": "mistral"
+  },
+  "nemotron-3-super-120b-a12b": {
+   "tier": "mid",
+   "capabilities": [
+    "text",
+    "reasoning"
+   ],
+   "context_length": 262144,
+   "price_in": 0,
+   "price_out": 0,
+   "family": "nemotron"
+  },
+  "nemotron-3-ultra-550b-a55b": {
+   "tier": "top",
+   "capabilities": [
+    "text",
+    "reasoning"
+   ],
+   "context_length": 262144,
+   "price_in": 0,
+   "price_out": 0,
+   "family": "nemotron"
+  },
+  "nemotron-nano-12b-v2-vl": {
+   "tier": "lite",
+   "capabilities": [
+    "text",
+    "vision"
+   ],
+   "context_length": 131072,
+   "price_in": 0,
+   "price_out": 0,
+   "family": "nemotron"
+  },
+  "llama-3.1-nemotron-nano-vl-8b-v1": {
+   "tier": "lite",
+   "capabilities": [
+    "text",
+    "vision"
+   ],
+   "context_length": 131072,
+   "price_in": 0,
+   "price_out": 0,
+   "family": "nemotron"
+  },
+  "llama-3.2-11b-vision-instruct": {
+   "tier": "lite",
+   "capabilities": [
+    "text",
+    "vision"
+   ],
+   "context_length": 131072,
+   "price_in": 0,
+   "price_out": 0,
+   "family": "llama"
+  },
+  "sensenova-6.7-flash-lite": {
+   "tier": "lite",
+   "capabilities": [
+    "text",
+    "vision"
+   ],
+   "context_length": 131072,
+   "price_in": 0,
+   "price_out": 0,
+   "family": "sensenova"
+  },
+  "sensenova-u1-fast": {
+   "tier": "lite",
+   "capabilities": [
+    "text",
+    "vision"
+   ],
+   "context_length": 32768,
+   "price_in": 0,
+   "price_out": 0,
+   "family": "sensenova"
+  },
+  "internvl3_5-241b-a28b": {
+   "tier": "mid",
+   "capabilities": [
+    "text",
+    "vision"
+   ],
+   "context_length": 32768,
+   "price_in": 0,
+   "price_out": 0,
+   "family": "internvl"
+  },
+  "qwen3-vl-8b-thinking": {
+   "tier": "lite",
+   "capabilities": [
+    "text",
+    "vision",
+    "reasoning"
+   ],
+   "context_length": 262144,
+   "price_in": 0,
+   "price_out": 0,
+   "family": "qwen"
+  },
+  "qwen3-vl-8b-instruct": {
+   "tier": "lite",
+   "capabilities": [
+    "text",
+    "vision"
+   ],
+   "context_length": 262144,
+   "price_in": 0,
+   "price_out": 0,
+   "family": "qwen"
+  },
+  "ernie-4.5-vl-28b-a3b-pt": {
+   "tier": "lite",
+   "capabilities": [
+    "text",
+    "vision"
+   ],
+   "context_length": 32768,
+   "price_in": 0,
+   "price_out": 0,
+   "family": "ernie"
+  },
+  "4.0Ultra": {
+   "tier": "top",
+   "capabilities": [
+    "text"
+   ],
+   "context_length": 32768,
+   "family": "iflytek"
+  },
+  "@cf/deepseek-ai/deepseek-r1-distill-qwen-32b": {
+   "tier": "mid",
+   "capabilities": [
+    "reasoning",
+    "text"
+   ],
+   "family": "cloudflare-ai"
+  },
+  "@cf/google/gemma-3-12b-it": {
+   "tier": "mid",
+   "capabilities": [
+    "text"
+   ],
+   "family": "cloudflare-ai"
+  },
+  "@cf/google/gemma-4-26b-a4b-it": {
+   "tier": "mid",
+   "capabilities": [
+    "text"
+   ],
+   "context_length": 262144,
+   "family": "cloudflare-ai"
+  },
+  "@cf/meta/llama-3.1-8b-instruct": {
+   "tier": "lite",
+   "capabilities": [
+    "text"
+   ],
+   "family": "cloudflare-ai"
+  },
+  "@cf/meta/llama-3.2-3b-instruct": {
+   "tier": "lite",
+   "capabilities": [
+    "text"
+   ],
+   "family": "cloudflare-ai"
+  },
+  "@cf/meta/llama-3.3-70b-instruct": {
+   "tier": "mid",
+   "capabilities": [
+    "text"
+   ],
+   "family": "cloudflare-ai"
+  },
+  "@cf/meta/llama-3.3-70b-instruct-fp8-fast": {
+   "tier": "mid",
+   "capabilities": [
+    "text"
+   ],
+   "family": "cloudflare-ai"
+  },
+  "@cf/mistral/mistral-7b-instruct-v0.2-lora": {
+   "tier": "lite",
+   "capabilities": [
+    "text"
+   ],
+   "family": "cloudflare-ai"
+  },
+  "@cf/qwen/qwen2.5-coder-15b-instruct": {
+   "tier": "mid",
+   "capabilities": [
+    "text"
+   ],
+   "family": "cloudflare-ai"
+  },
+  "@cf/qwen/qwen2.5-coder-32b-instruct": {
+   "tier": "mid",
+   "capabilities": [
+    "text"
+   ],
+   "family": "cloudflare-ai"
+  },
+  "@cf/qwen/qwq-32b": {
+   "tier": "mid",
+   "capabilities": [
+    "text"
+   ],
+   "family": "cloudflare-ai"
+  },
+  "@cf/zai-org/glm-4.7-flash": {
+   "tier": "mid",
+   "capabilities": [
+    "text"
+   ],
+   "context_length": 131072,
+   "family": "cloudflare-ai"
+  },
+  "Alibaba/qwen3-vl:235b": {
+   "tier": "mid",
+   "capabilities": [
+    "text",
+    "vision"
+   ],
+   "context_length": 128000,
+   "family": "freeaiapikey"
+  },
+  "Alibaba/qwen3.5": {
+   "tier": "mid",
+   "capabilities": [
+    "text"
+   ],
+   "context_length": 128000,
+   "family": "freeaiapikey"
+  },
+  "Baichuan3-Turbo": {
+   "tier": "mid",
+   "capabilities": [
+    "text"
+   ],
+   "context_length": 32768,
+   "family": "baichuan"
+  },
+  "Baichuan3-Turbo-128k": {
+   "tier": "mid",
+   "capabilities": [
+    "text"
+   ],
+   "context_length": 131072,
+   "family": "baichuan"
+  },
+  "Baichuan4": {
+   "tier": "mid",
+   "capabilities": [
+    "text"
+   ],
+   "family": "baichuan"
+  },
+  "Baichuan4-Air": {
+   "tier": "mid",
+   "capabilities": [
+    "text"
+   ],
+   "context_length": 32768,
+   "family": "baichuan"
+  },
+  "Baichuan4-Turbo": {
+   "tier": "mid",
+   "capabilities": [
+    "text"
+   ],
+   "context_length": 32768,
+   "family": "baichuan"
+  },
+  "CLAUDE_4_5_HAIKU": {
+   "tier": "mid",
+   "capabilities": [
+    "text"
+   ],
+   "context_length": 200000,
+   "family": "theoldllm"
+  },
+  "CLAUDE_4_6_OPUS": {
+   "tier": "mid",
+   "capabilities": [
+    "text"
+   ],
+   "context_length": 200000,
+   "family": "theoldllm"
+  },
+  "CLAUDE_4_6_SONNET": {
+   "tier": "mid",
+   "capabilities": [
+    "text"
+   ],
+   "context_length": 200000,
+   "family": "theoldllm"
+  },
+  "CohereLabs/c4ai-command-r7b-12-2024": {
+   "tier": "mid",
+   "capabilities": [
+    "text"
+   ],
+   "family": "huggingchat"
+  },
+  "CohereLabs/command-a-reasoning-08-2025": {
+   "tier": "mid",
+   "capabilities": [
+    "reasoning",
+    "text"
+   ],
+   "family": "huggingchat"
+  },
+  "CohereLabs/command-a-vision-07-2025": {
+   "tier": "mid",
+   "capabilities": [
+    "text",
+    "vision"
+   ],
+   "family": "huggingchat"
+  },
+  "GLM-5.1-FP8": {
+   "tier": "mid",
+   "capabilities": [
+    "text"
+   ],
+   "family": "vertex"
+  },
+  "GPT_4o": {
+   "tier": "mid",
+   "capabilities": [
+    "text"
+   ],
+   "family": "theoldllm"
+  },
+  "GPT_5": {
+   "tier": "mid",
+   "capabilities": [
+    "text"
+   ],
+   "context_length": 400000,
+   "family": "theoldllm"
+  },
+  "GPT_5_1": {
+   "tier": "mid",
+   "capabilities": [
+    "text"
+   ],
+   "context_length": 400000,
+   "family": "theoldllm"
+  },
+  "GPT_5_2": {
+   "tier": "mid",
+   "capabilities": [
+    "text"
+   ],
+   "context_length": 400000,
+   "family": "theoldllm"
+  },
+  "GPT_5_3": {
+   "tier": "mid",
+   "capabilities": [
+    "text"
+   ],
+   "context_length": 400000,
+   "family": "theoldllm"
+  },
+  "GPT_5_4": {
+   "tier": "mid",
+   "capabilities": [
+    "text"
+   ],
+   "context_length": 400000,
+   "family": "theoldllm"
+  },
+  "GPT_o3_mini": {
+   "tier": "lite",
+   "capabilities": [
+    "text"
+   ],
+   "family": "theoldllm"
+  },
+  "GPT_o4_mini": {
+   "tier": "lite",
+   "capabilities": [
+    "text"
+   ],
+   "family": "theoldllm"
+  },
+  "HCX-005": {
+   "tier": "mid",
+   "capabilities": [
+    "text"
+   ],
+   "family": "clova-studio"
+  },
+  "HCX-007": {
+   "tier": "mid",
+   "capabilities": [
+    "text"
+   ],
+   "family": "clova-studio"
+  },
+  "Hermes-4-405B": {
+   "tier": "top",
+   "capabilities": [
+    "text"
+   ],
+   "family": "nous-research"
+  },
+  "Hermes-4-70B": {
+   "tier": "mid",
+   "capabilities": [
+    "text"
+   ],
+   "family": "nous-research"
+  },
+  "HuggingFaceTB/SmolLM3-3B-Base": {
+   "tier": "lite",
+   "capabilities": [
+    "text"
+   ],
+   "family": "pioneer"
+  },
+  "Ling-2.6-1T": {
+   "tier": "mid",
+   "capabilities": [
+    "text"
+   ],
+   "family": "ant-ling"
+  },
+  "Ling-2.6-flash": {
+   "tier": "mid",
+   "capabilities": [
+    "text"
+   ],
+   "family": "ant-ling"
+  },
+  "LongCat-2.0": {
+   "tier": "mid",
+   "capabilities": [
+    "text"
+   ],
+   "context_length": 1048576,
+   "family": "longcat"
+  },
+  "MiniMax-M2.5": {
+   "tier": "top",
+   "capabilities": [
+    "text"
+   ],
+   "family": "minimax"
+  },
+  "MiniMax-M2.5-highspeed": {
+   "tier": "top",
+   "capabilities": [
+    "text"
+   ],
+   "family": "minimax"
+  },
+  "MiniMax-M2.7-highspeed": {
+   "tier": "top",
+   "capabilities": [
+    "text"
+   ],
+   "family": "minimax"
+  },
+  "NousResearch/Hermes-3-Llama-3.1-70B": {
+   "tier": "mid",
+   "capabilities": [
+    "text"
+   ],
+   "family": "hyperbolic"
+  },
+  "Qwen/Qwen2.5-72B-Instruct": {
+   "tier": "mid",
+   "capabilities": [
+    "text"
+   ],
+   "family": "hyperbolic"
+  },
+  "Qwen/Qwen2.5-7B-Instruct": {
+   "tier": "lite",
+   "capabilities": [
+    "text"
+   ],
+   "family": "huggingface"
+  },
+  "Qwen/Qwen3-1.7B-Base": {
+   "tier": "mid",
+   "capabilities": [
+    "text"
+   ],
+   "family": "pioneer"
+  },
+  "Qwen/Qwen3-32B": {
+   "tier": "mid",
+   "capabilities": [
+    "text"
+   ],
+   "family": "pioneer"
+  },
+  "Qwen/Qwen3-4B-Base": {
+   "tier": "lite",
+   "capabilities": [
+    "text"
+   ],
+   "family": "pioneer"
+  },
+  "Qwen/Qwen3-8B": {
+   "tier": "lite",
+   "capabilities": [
+    "text"
+   ],
+   "family": "pioneer"
+  },
+  "Qwen/Qwen3.5-9B": {
+   "tier": "lite",
+   "capabilities": [
+    "text"
+   ],
+   "family": "pioneer"
+  },
+  "Qwen/Qwen3.6-27B": {
+   "tier": "mid",
+   "capabilities": [
+    "vision"
+   ],
+   "family": "huggingchat"
+  },
+  "Qwen/Qwen3.6-35B-A3B": {
+   "tier": "mid",
+   "capabilities": [
+    "vision"
+   ],
+   "family": "huggingchat"
+  },
+  "Qwen/Qwen3.6-Max-Preview": {
+   "tier": "top",
+   "capabilities": [
+    "reasoning"
+   ],
+   "context_length": 1000000,
+   "family": "command-code"
+  },
+  "Qwen/Qwen3.6-Plus": {
+   "tier": "mid",
+   "capabilities": [
+    "reasoning"
+   ],
+   "context_length": 1000000,
+   "family": "command-code"
+  },
+  "Ring-2.6-1T": {
+   "tier": "mid",
+   "capabilities": [
+    "text"
+   ],
+   "family": "ant-ling"
+  },
+  "V_2A": {
+   "tier": "mid",
+   "capabilities": [
+    "text"
+   ],
+   "family": "ideogram"
+  },
+  "V_3": {
+   "tier": "mid",
+   "capabilities": [
+    "text"
+   ],
+   "family": "ideogram"
+  },
+  "XiaomiMiMo/MiMo-V2.5-Pro": {
+   "tier": "top",
+   "capabilities": [
+    "text"
+   ],
+   "family": "huggingchat"
+  },
+  "abacusai/dracarys-llama-3.1-70b-instruct": {
+   "tier": "mid",
+   "capabilities": [
+    "text"
+   ],
+   "family": "nvidia"
+  },
+  "adamo1139/Hermes-3-Llama-3.1-8B-FP8-Dynamic": {
+   "tier": "lite",
+   "capabilities": [
+    "text"
+   ],
+   "family": "uncloseai"
+  },
+  "adapta-claude": {
+   "tier": "mid",
+   "capabilities": [
+    "text"
+   ],
+   "family": "adapta-web"
+  },
+  "adapta-deepseek": {
+   "tier": "mid",
+   "capabilities": [
+    "text"
+   ],
+   "family": "adapta-web"
+  },
+  "adapta-gemini": {
+   "tier": "lite",
+   "capabilities": [
+    "text"
+   ],
+   "family": "adapta-web"
+  },
+  "adapta-gpt": {
+   "tier": "mid",
+   "capabilities": [
+    "text"
+   ],
+   "family": "adapta-web"
+  },
+  "adapta-grok": {
+   "tier": "mid",
+   "capabilities": [
+    "text"
+   ],
+   "family": "adapta-web"
+  },
+  "adapta-llama": {
+   "tier": "mid",
+   "capabilities": [
+    "text"
+   ],
+   "family": "adapta-web"
+  },
+  "adapta-one": {
+   "tier": "mid",
+   "capabilities": [
+    "text"
+   ],
+   "family": "adapta-web"
+  },
+  "anthropic.claude-haiku-4-5": {
+   "tier": "mid",
+   "capabilities": [
+    "vision"
+   ],
+   "family": "bedrock"
+  },
+  "anthropic.claude-opus-4-6": {
+   "tier": "mid",
+   "capabilities": [
+    "vision"
+   ],
+   "context_length": 1000000,
+   "family": "bedrock"
+  },
+  "anthropic.claude-opus-4-7": {
+   "tier": "mid",
+   "capabilities": [
+    "vision"
+   ],
+   "context_length": 1000000,
+   "family": "bedrock"
+  },
+  "anthropic.claude-sonnet-4-5": {
+   "tier": "mid",
+   "capabilities": [
+    "vision"
+   ],
+   "context_length": 200000,
+   "family": "bedrock"
+  },
+  "anthropic.claude-sonnet-4-6": {
+   "tier": "mid",
+   "capabilities": [
+    "vision"
+   ],
+   "context_length": 1000000,
+   "family": "bedrock"
+  },
+  "anthropic/claude-3.7-sonnet": {
+   "tier": "mid",
+   "capabilities": [
+    "text"
+   ],
+   "context_length": 200000,
+   "family": "api-airforce"
+  },
+  "anthropic/claude-haiku-4.5": {
+   "tier": "mid",
+   "capabilities": [
+    "text"
+   ],
+   "family": "kilocode"
+  },
+  "anthropic/claude-opus-4.5": {
+   "tier": "mid",
+   "capabilities": [
+    "reasoning",
+    "vision"
+   ],
+   "context_length": 200000,
+   "family": "zenmux"
+  },
+  "anthropic/claude-opus-4.6": {
+   "tier": "mid",
+   "capabilities": [
+    "text"
+   ],
+   "context_length": 1000000,
+   "family": "freeaiapikey"
+  },
+  "anthropic/claude-opus-4.7": {
+   "tier": "mid",
+   "capabilities": [
+    "text"
+   ],
+   "family": "kilocode"
+  },
+  "anthropic/claude-opus-4.8": {
+   "tier": "mid",
+   "capabilities": [
+    "reasoning",
+    "vision"
+   ],
+   "context_length": 1000000,
+   "family": "cline"
+  },
+  "anthropic/claude-sonnet-4.5": {
+   "tier": "mid",
+   "capabilities": [
+    "reasoning",
+    "vision"
+   ],
+   "context_length": 200000,
+   "family": "zenmux"
+  },
+  "anthropic/claude-sonnet-4.6": {
+   "tier": "mid",
+   "capabilities": [
+    "text"
+   ],
+   "context_length": 1000000,
+   "family": "freeaiapikey"
+  },
+  "arcee-ai/trinity-large-preview:free": {
+   "tier": "top",
+   "capabilities": [
+    "text"
+   ],
+   "family": "kilo-gateway"
+  },
+  "auto": {
+   "tier": "mid",
+   "capabilities": [
+    "text"
+   ],
+   "family": "cursor"
+  },
+  "auto:free": {
+   "tier": "mid",
+   "capabilities": [
+    "text"
+   ],
+   "family": "bazaarlink"
+  },
+  "baidu/ERNIE-4.5-VL-424B-A47B-Base-PT": {
+   "tier": "mid",
+   "capabilities": [
+    "text",
+    "vision"
+   ],
+   "family": "huggingchat"
+  },
+  "big-pickle": {
+   "tier": "mid",
+   "capabilities": [
+    "reasoning"
+   ],
+   "family": "opencode"
+  },
+  "chatdolphin": {
+   "tier": "mid",
+   "capabilities": [
+    "text"
+   ],
+   "context_length": 8192,
+   "family": "nlpcloud"
+  },
+  "chirp-crow": {
+   "tier": "mid",
+   "capabilities": [
+    "text"
+   ],
+   "family": "suno"
+  },
+  "chirp-fenix": {
+   "tier": "mid",
+   "capabilities": [
+    "text"
+   ],
+   "family": "suno"
+  },
+  "chirp-v3-5": {
+   "tier": "mid",
+   "capabilities": [
+    "text"
+   ],
+   "family": "suno"
+  },
+  "chirp-v4": {
+   "tier": "mid",
+   "capabilities": [
+    "text"
+   ],
+   "family": "suno"
+  },
+  "claude": {
+   "tier": "mid",
+   "capabilities": [
+    "text"
+   ],
+   "family": "pollinations"
+  },
+  "claude-3-5-sonnet-20241022": {
+   "tier": "mid",
+   "capabilities": [
+    "text"
+   ],
+   "family": "aimlapi"
+  },
+  "claude-3-7-sonnet-20250219": {
+   "tier": "mid",
+   "capabilities": [
+    "text"
+   ],
+   "family": "inner-ai"
+  },
+  "claude-3-7-sonnet-20250514": {
+   "tier": "mid",
+   "capabilities": [
+    "text"
+   ],
+   "family": "coze"
+  },
+  "claude-3.7": {
+   "tier": "mid",
+   "capabilities": [
+    "text"
+   ],
+   "family": "t3-web"
+  },
+  "claude-4.5-sonnet": {
+   "tier": "mid",
+   "capabilities": [
+    "text"
+   ],
+   "family": "cursor"
+  },
+  "claude-4.5-sonnet-thinking": {
+   "tier": "mid",
+   "capabilities": [
+    "reasoning",
+    "text"
+   ],
+   "family": "cursor"
+  },
+  "claude-4.6-opus-high": {
+   "tier": "mid",
+   "capabilities": [
+    "text"
+   ],
+   "family": "cursor"
+  },
+  "claude-4.6-opus-high-thinking": {
+   "tier": "mid",
+   "capabilities": [
+    "reasoning",
+    "text"
+   ],
+   "family": "cursor"
+  },
+  "claude-4.6-opus-high-thinking-fast": {
+   "tier": "mid",
+   "capabilities": [
+    "reasoning",
+    "text"
+   ],
+   "family": "cursor"
+  },
+  "claude-4.6-opus-max": {
+   "tier": "top",
+   "capabilities": [
+    "text"
+   ],
+   "family": "cursor"
+  },
+  "claude-4.6-opus-max-thinking": {
+   "tier": "top",
+   "capabilities": [
+    "reasoning",
+    "text"
+   ],
+   "family": "cursor"
+  },
+  "claude-4.6-opus-max-thinking-fast": {
+   "tier": "top",
+   "capabilities": [
+    "reasoning",
+    "text"
+   ],
+   "family": "cursor"
+  },
+  "claude-4.6-sonnet-medium": {
+   "tier": "mid",
+   "capabilities": [
+    "text"
+   ],
+   "family": "cursor"
+  },
+  "claude-4.6-sonnet-medium-thinking": {
+   "tier": "mid",
+   "capabilities": [
+    "reasoning",
+    "text"
+   ],
+   "family": "cursor"
+  },
+  "claude-fable-5": {
+   "tier": "mid",
+   "capabilities": [
+    "text"
+   ],
+   "context_length": 1048576,
+   "family": "anthropic"
+  },
+  "claude-fable-5-high": {
+   "tier": "mid",
+   "capabilities": [
+    "text"
+   ],
+   "family": "cursor"
+  },
+  "claude-fable-5-low": {
+   "tier": "mid",
+   "capabilities": [
+    "text"
+   ],
+   "family": "cursor"
+  },
+  "claude-fable-5-max": {
+   "tier": "top",
+   "capabilities": [
+    "text"
+   ],
+   "family": "cursor"
+  },
+  "claude-fable-5-medium": {
+   "tier": "mid",
+   "capabilities": [
+    "text"
+   ],
+   "family": "cursor"
+  },
+  "claude-fable-5-thinking-high": {
+   "tier": "mid",
+   "capabilities": [
+    "reasoning",
+    "text"
+   ],
+   "family": "cursor"
+  },
+  "claude-fable-5-thinking-low": {
+   "tier": "mid",
+   "capabilities": [
+    "reasoning",
+    "text"
+   ],
+   "family": "cursor"
+  },
+  "claude-fable-5-thinking-max": {
+   "tier": "top",
+   "capabilities": [
+    "reasoning",
+    "text"
+   ],
+   "family": "cursor"
+  },
+  "claude-fable-5-thinking-medium": {
+   "tier": "mid",
+   "capabilities": [
+    "reasoning",
+    "text"
+   ],
+   "family": "cursor"
+  },
+  "claude-fable-5-thinking-xhigh": {
+   "tier": "mid",
+   "capabilities": [
+    "reasoning",
+    "text"
+   ],
+   "family": "cursor"
+  },
+  "claude-fable-5-xhigh": {
+   "tier": "mid",
+   "capabilities": [
+    "text"
+   ],
+   "family": "cursor"
+  },
+  "claude-fast": {
+   "tier": "mid",
+   "capabilities": [
+    "text"
+   ],
+   "family": "pollinations"
+  },
+  "claude-haiku-4": {
+   "tier": "mid",
+   "capabilities": [
+    "text"
+   ],
+   "family": "t3-web"
+  },
+  "claude-haiku-4-5": {
+   "tier": "mid",
+   "capabilities": [
+    "text"
+   ],
+   "family": "bluesminds"
+  },
+  "claude-haiku-4-5-20251001": {
+   "tier": "mid",
+   "capabilities": [
+    "text"
+   ],
+   "family": "agentrouter"
+  },
+  "claude-large": {
+   "tier": "top",
+   "capabilities": [
+    "text"
+   ],
+   "family": "pollinations"
+  },
+  "claude-opus-4": {
+   "tier": "mid",
+   "capabilities": [
+    "text"
+   ],
+   "family": "t3-web"
+  },
+  "claude-opus-4-5": {
+   "tier": "mid",
+   "capabilities": [
+    "text"
+   ],
+   "context_length": 200000,
+   "family": "bluesminds"
+  },
+  "claude-opus-4-5-20251101": {
+   "tier": "mid",
+   "capabilities": [
+    "text"
+   ],
+   "context_length": 200000,
+   "family": "claude"
+  },
+  "claude-opus-4-6": {
+   "tier": "mid",
+   "capabilities": [
+    "text"
+   ],
+   "family": "agentrouter"
+  },
+  "claude-opus-4-7": {
+   "tier": "mid",
+   "capabilities": [
+    "text"
+   ],
+   "context_length": 1000000,
+   "family": "claude"
+  },
+  "claude-opus-4-7-high": {
+   "tier": "mid",
+   "capabilities": [
+    "text"
+   ],
+   "family": "cursor"
+  },
+  "claude-opus-4-7-low": {
+   "tier": "mid",
+   "capabilities": [
+    "text"
+   ],
+   "family": "cursor"
+  },
+  "claude-opus-4-7-max": {
+   "tier": "top",
+   "capabilities": [
+    "text"
+   ],
+   "family": "cursor"
+  },
+  "claude-opus-4-7-medium": {
+   "tier": "mid",
+   "capabilities": [
+    "text"
+   ],
+   "family": "cursor"
+  },
+  "claude-opus-4-7-thinking-high": {
+   "tier": "mid",
+   "capabilities": [
+    "reasoning",
+    "text"
+   ],
+   "family": "cursor"
+  },
+  "claude-opus-4-7-thinking-low": {
+   "tier": "mid",
+   "capabilities": [
+    "reasoning",
+    "text"
+   ],
+   "family": "cursor"
+  },
+  "claude-opus-4-7-thinking-max": {
+   "tier": "top",
+   "capabilities": [
+    "reasoning",
+    "text"
+   ],
+   "family": "cursor"
+  },
+  "claude-opus-4-7-thinking-medium": {
+   "tier": "mid",
+   "capabilities": [
+    "reasoning",
+    "text"
+   ],
+   "family": "cursor"
+  },
+  "claude-opus-4-7-thinking-xhigh": {
+   "tier": "mid",
+   "capabilities": [
+    "reasoning",
+    "text"
+   ],
+   "family": "cursor"
+  },
+  "claude-opus-4-7-xhigh": {
+   "tier": "mid",
+   "capabilities": [
+    "text"
+   ],
+   "family": "cursor"
+  },
+  "claude-opus-4-8": {
+   "tier": "mid",
+   "capabilities": [
+    "text"
+   ],
+   "context_length": 1000000,
+   "family": "claude"
+  },
+  "claude-opus-4-8-high": {
+   "tier": "mid",
+   "capabilities": [
+    "text"
+   ],
+   "family": "cursor"
+  },
+  "claude-opus-4-8-high-fast": {
+   "tier": "mid",
+   "capabilities": [
+    "text"
+   ],
+   "family": "cursor"
+  },
+  "claude-opus-4-8-low": {
+   "tier": "mid",
+   "capabilities": [
+    "text"
+   ],
+   "family": "cursor"
+  },
+  "claude-opus-4-8-low-fast": {
+   "tier": "mid",
+   "capabilities": [
+    "text"
+   ],
+   "family": "cursor"
+  },
+  "claude-opus-4-8-max": {
+   "tier": "top",
+   "capabilities": [
+    "text"
+   ],
+   "family": "cursor"
+  },
+  "claude-opus-4-8-max-fast": {
+   "tier": "top",
+   "capabilities": [
+    "text"
+   ],
+   "family": "cursor"
+  },
+  "claude-opus-4-8-medium": {
+   "tier": "mid",
+   "capabilities": [
+    "text"
+   ],
+   "family": "cursor"
+  },
+  "claude-opus-4-8-medium-fast": {
+   "tier": "mid",
+   "capabilities": [
+    "text"
+   ],
+   "family": "cursor"
+  },
+  "claude-opus-4-8-thinking-high": {
+   "tier": "mid",
+   "capabilities": [
+    "reasoning",
+    "text"
+   ],
+   "family": "cursor"
+  },
+  "claude-opus-4-8-thinking-high-fast": {
+   "tier": "mid",
+   "capabilities": [
+    "reasoning",
+    "text"
+   ],
+   "family": "cursor"
+  },
+  "claude-opus-4-8-thinking-low": {
+   "tier": "mid",
+   "capabilities": [
+    "reasoning",
+    "text"
+   ],
+   "family": "cursor"
+  },
+  "claude-opus-4-8-thinking-low-fast": {
+   "tier": "mid",
+   "capabilities": [
+    "reasoning",
+    "text"
+   ],
+   "family": "cursor"
+  },
+  "claude-opus-4-8-thinking-max": {
+   "tier": "top",
+   "capabilities": [
+    "reasoning",
+    "text"
+   ],
+   "family": "cursor"
+  },
+  "claude-opus-4-8-thinking-max-fast": {
+   "tier": "top",
+   "capabilities": [
+    "reasoning",
+    "text"
+   ],
+   "family": "cursor"
+  },
+  "claude-opus-4-8-thinking-medium": {
+   "tier": "mid",
+   "capabilities": [
+    "reasoning",
+    "text"
+   ],
+   "family": "cursor"
+  },
+  "claude-opus-4-8-thinking-medium-fast": {
+   "tier": "mid",
+   "capabilities": [
+    "reasoning",
+    "text"
+   ],
+   "family": "cursor"
+  },
+  "claude-opus-4-8-thinking-xhigh": {
+   "tier": "mid",
+   "capabilities": [
+    "reasoning",
+    "text"
+   ],
+   "family": "cursor"
+  },
+  "claude-opus-4-8-thinking-xhigh-fast": {
+   "tier": "mid",
+   "capabilities": [
+    "reasoning",
+    "text"
+   ],
+   "family": "cursor"
+  },
+  "claude-opus-4-8-xhigh": {
+   "tier": "mid",
+   "capabilities": [
+    "text"
+   ],
+   "family": "cursor"
+  },
+  "claude-opus-4-8-xhigh-fast": {
+   "tier": "mid",
+   "capabilities": [
+    "text"
+   ],
+   "family": "cursor"
+  },
+  "claude-opus-4.5-thinking": {
+   "tier": "mid",
+   "capabilities": [
+    "reasoning",
+    "text"
+   ],
+   "context_length": 200000,
+   "family": "windsurf"
+  },
+  "claude-opus-4.6-thinking": {
+   "tier": "mid",
+   "capabilities": [
+    "reasoning",
+    "text"
+   ],
+   "context_length": 200000,
+   "family": "windsurf"
+  },
+  "claude-opus-4.7-high": {
+   "tier": "mid",
+   "capabilities": [
+    "text"
+   ],
+   "context_length": 200000,
+   "family": "windsurf"
+  },
+  "claude-opus-4.7-low": {
+   "tier": "mid",
+   "capabilities": [
+    "text"
+   ],
+   "context_length": 200000,
+   "family": "windsurf"
+  },
+  "claude-opus-4.7-max": {
+   "tier": "top",
+   "capabilities": [
+    "text"
+   ],
+   "context_length": 200000,
+   "family": "windsurf"
+  },
+  "claude-opus-4.7-medium": {
+   "tier": "mid",
+   "capabilities": [
+    "text"
+   ],
+   "context_length": 200000,
+   "family": "windsurf"
+  },
+  "claude-opus-4.7-review": {
+   "tier": "mid",
+   "capabilities": [
+    "text"
+   ],
+   "context_length": 200000,
+   "family": "windsurf"
+  },
+  "claude-opus-4.7-xhigh": {
+   "tier": "mid",
+   "capabilities": [
+    "text"
+   ],
+   "context_length": 200000,
+   "family": "windsurf"
+  },
+  "claude-opus-4.8-fast": {
+   "tier": "mid",
+   "capabilities": [
+    "text"
+   ],
+   "context_length": 1000000,
+   "family": "ghe-copilot"
+  },
+  "claude-opus-5": {
+   "tier": "mid",
+   "capabilities": [
+    "text"
+   ],
+   "context_length": 1000000,
+   "family": "anthropic"
+  },
+  "claude-sonnet-4": {
+   "tier": "mid",
+   "capabilities": [
+    "text"
+   ],
+   "family": "t3-web"
+  },
+  "claude-sonnet-4-5": {
+   "tier": "mid",
+   "capabilities": [
+    "text"
+   ],
+   "family": "bluesminds"
+  },
+  "claude-sonnet-4-5-20250929": {
+   "tier": "mid",
+   "capabilities": [
+    "text"
+   ],
+   "context_length": 200000,
+   "family": "claude"
+  },
+  "claude-sonnet-4-6": {
+   "tier": "mid",
+   "capabilities": [
+    "text"
+   ],
+   "context_length": 1000000,
+   "family": "claude"
+  },
+  "claude-sonnet-4.5-thinking": {
+   "tier": "mid",
+   "capabilities": [
+    "reasoning",
+    "text"
+   ],
+   "context_length": 200000,
+   "family": "windsurf"
+  },
+  "claude-sonnet-4.6-1m": {
+   "tier": "mid",
+   "capabilities": [
+    "text"
+   ],
+   "context_length": 1000000,
+   "family": "windsurf"
+  },
+  "claude-sonnet-4.6-thinking": {
+   "tier": "mid",
+   "capabilities": [
+    "reasoning",
+    "text"
+   ],
+   "context_length": 200000,
+   "family": "windsurf"
+  },
+  "claude-sonnet-4.6-thinking-1m": {
+   "tier": "mid",
+   "capabilities": [
+    "reasoning",
+    "text"
+   ],
+   "context_length": 1000000,
+   "family": "windsurf"
+  },
+  "claude-sonnet-5": {
+   "tier": "mid",
+   "capabilities": [
+    "text"
+   ],
+   "context_length": 1048576,
+   "family": "anthropic"
+  },
+  "claude-sonnet-5-high": {
+   "tier": "mid",
+   "capabilities": [
+    "text"
+   ],
+   "family": "cursor"
+  },
+  "claude-sonnet-5-low": {
+   "tier": "mid",
+   "capabilities": [
+    "text"
+   ],
+   "family": "cursor"
+  },
+  "claude-sonnet-5-max": {
+   "tier": "top",
+   "capabilities": [
+    "text"
+   ],
+   "family": "cursor"
+  },
+  "claude-sonnet-5-medium": {
+   "tier": "mid",
+   "capabilities": [
+    "text"
+   ],
+   "family": "cursor"
+  },
+  "claude-sonnet-5-thinking-high": {
+   "tier": "mid",
+   "capabilities": [
+    "reasoning",
+    "text"
+   ],
+   "family": "cursor"
+  },
+  "claude-sonnet-5-thinking-low": {
+   "tier": "mid",
+   "capabilities": [
+    "reasoning",
+    "text"
+   ],
+   "family": "cursor"
+  },
+  "claude-sonnet-5-thinking-max": {
+   "tier": "top",
+   "capabilities": [
+    "reasoning",
+    "text"
+   ],
+   "family": "cursor"
+  },
+  "claude-sonnet-5-thinking-medium": {
+   "tier": "mid",
+   "capabilities": [
+    "reasoning",
+    "text"
+   ],
+   "family": "cursor"
+  },
+  "claude-sonnet-5-thinking-xhigh": {
+   "tier": "mid",
+   "capabilities": [
+    "reasoning",
+    "text"
+   ],
+   "family": "cursor"
+  },
+  "claude-sonnet-5-xhigh": {
+   "tier": "mid",
+   "capabilities": [
+    "text"
+   ],
+   "family": "cursor"
+  },
+  "claude_haiku_3_5": {
+   "tier": "mid",
+   "capabilities": [
+    "text"
+   ],
+   "context_length": 200000,
+   "family": "theoldllm"
+  },
+  "claude_opus_4": {
+   "tier": "mid",
+   "capabilities": [
+    "text"
+   ],
+   "context_length": 200000,
+   "family": "theoldllm"
+  },
+  "claude_sonnet_4": {
+   "tier": "mid",
+   "capabilities": [
+    "text"
+   ],
+   "context_length": 200000,
+   "family": "theoldllm"
+  },
+  "cline-pass/kimi-k2.7-code": {
+   "tier": "mid",
+   "capabilities": [
+    "reasoning",
+    "vision"
+   ],
+   "context_length": 262144,
+   "family": "clinepass"
+  },
+  "cline-pass/kimi-k3": {
+   "tier": "mid",
+   "capabilities": [
+    "reasoning",
+    "vision"
+   ],
+   "context_length": 1048576,
+   "family": "clinepass"
+  },
+  "cline-pass/mimo-v2.5": {
+   "tier": "mid",
+   "capabilities": [
+    "reasoning",
+    "vision"
+   ],
+   "context_length": 1048576,
+   "family": "clinepass"
+  },
+  "cline-pass/qwen3.7-max": {
+   "tier": "top",
+   "capabilities": [
+    "reasoning"
+   ],
+   "context_length": 1000000,
+   "family": "clinepass"
+  },
+  "cline-pass/qwen3.7-plus": {
+   "tier": "mid",
+   "capabilities": [
+    "reasoning",
+    "vision"
+   ],
+   "context_length": 1000000,
+   "family": "clinepass"
+  },
+  "codestral-2508": {
+   "tier": "mid",
+   "capabilities": [
+    "text"
+   ],
+   "family": "puter"
+  },
+  "codestral-latest": {
+   "tier": "mid",
+   "capabilities": [
+    "text"
+   ],
+   "family": "mistral"
+  },
+  "command-a-03-2025": {
+   "tier": "mid",
+   "capabilities": [
+    "text"
+   ],
+   "family": "cohere"
+  },
+  "command-r-08-2024": {
+   "tier": "mid",
+   "capabilities": [
+    "text"
+   ],
+   "family": "cohere"
+  },
+  "command-r-plus-08-2024": {
+   "tier": "mid",
+   "capabilities": [
+    "text"
+   ],
+   "family": "cohere"
+  },
+  "command-r7b-12-2024": {
+   "tier": "mid",
+   "capabilities": [
+    "text"
+   ],
+   "family": "cohere"
+  },
+  "composer-2": {
+   "tier": "mid",
+   "capabilities": [
+    "text"
+   ],
+   "family": "cursor"
+  },
+  "composer-2-fast": {
+   "tier": "mid",
+   "capabilities": [
+    "text"
+   ],
+   "family": "cursor"
+  },
+  "composer-2.5": {
+   "tier": "mid",
+   "capabilities": [
+    "text"
+   ],
+   "family": "cursor"
+  },
+  "composer-2.5-fast": {
+   "tier": "mid",
+   "capabilities": [
+    "text"
+   ],
+   "family": "cursor"
+  },
+  "copilot-m365": {
+   "tier": "mid",
+   "capabilities": [
+    "text"
+   ],
+   "family": "copilot-m365-web"
+  },
+  "copilot-m365-claude-opus": {
+   "tier": "mid",
+   "capabilities": [
+    "text"
+   ],
+   "family": "copilot-m365-web"
+  },
+  "copilot-m365-gpt-5-5-chat": {
+   "tier": "mid",
+   "capabilities": [
+    "text"
+   ],
+   "family": "copilot-m365-web"
+  },
+  "copilot-m365-gpt-5-6-reasoning": {
+   "tier": "mid",
+   "capabilities": [
+    "reasoning",
+    "text"
+   ],
+   "family": "copilot-m365-web"
+  },
+  "copilot-pro": {
+   "tier": "top",
+   "capabilities": [
+    "text"
+   ],
+   "family": "copilot-web"
+  },
+  "deepseek": {
+   "tier": "mid",
+   "capabilities": [
+    "text"
+   ],
+   "family": "pollinations"
+  },
+  "deepseek-3.2": {
+   "tier": "mid",
+   "capabilities": [
+    "text"
+   ],
+   "family": "kiro"
+  },
+  "deepseek-ai/DeepSeek-R1": {
+   "tier": "mid",
+   "capabilities": [
+    "reasoning",
+    "text"
+   ],
+   "family": "hyperbolic"
+  },
+  "deepseek-ai/DeepSeek-V3": {
+   "tier": "mid",
+   "capabilities": [
+    "text"
+   ],
+   "family": "huggingface"
+  },
+  "deepseek-ai/deepseek-coder-33b": {
+   "tier": "mid",
+   "capabilities": [
+    "text"
+   ],
+   "family": "hackclub"
+  },
+  "deepseek-chat": {
+   "tier": "mid",
+   "capabilities": [
+    "text"
+   ],
+   "family": "aimlapi"
+  },
+  "deepseek-r1-0528": {
+   "tier": "mid",
+   "capabilities": [
+    "reasoning",
+    "text"
+   ],
+   "family": "llm7"
+  },
+  "deepseek-r1-search": {
+   "tier": "mid",
+   "capabilities": [
+    "reasoning",
+    "text"
+   ],
+   "family": "yuanbao-web"
+  },
+  "deepseek-reasoner": {
+   "tier": "mid",
+   "capabilities": [
+    "reasoning",
+    "text"
+   ],
+   "family": "bluesminds"
+  },
+  "deepseek-v3-0324": {
+   "tier": "mid",
+   "capabilities": [
+    "text"
+   ],
+   "family": "scaleway"
+  },
+  "deepseek-v3-2-volc": {
+   "tier": "mid",
+   "capabilities": [
+    "reasoning"
+   ],
+   "context_length": 96000,
+   "family": "codebuddy-cn"
+  },
+  "deepseek-v3-search": {
+   "tier": "mid",
+   "capabilities": [
+    "text"
+   ],
+   "family": "yuanbao-web"
+  },
+  "deepseek-v3.2": {
+   "tier": "mid",
+   "capabilities": [
+    "text"
+   ],
+   "family": "agentrouter"
+  },
+  "deepseek-v4": {
+   "tier": "mid",
+   "capabilities": [
+    "text"
+   ],
+   "context_length": 64000,
+   "family": "windsurf"
+  },
+  "deepseek-v4-flash-free": {
+   "tier": "mid",
+   "capabilities": [
+    "reasoning"
+   ],
+   "family": "opencode"
+  },
+  "deepseek-v4-pro-precision": {
+   "tier": "top",
+   "capabilities": [
+    "reasoning"
+   ],
+   "family": "crof"
+  },
+  "deepseek_v4": {
+   "tier": "mid",
+   "capabilities": [
+    "text"
+   ],
+   "context_length": 200000,
+   "family": "theoldllm"
+  },
+  "devstral": {
+   "tier": "mid",
+   "capabilities": [
+    "text"
+   ],
+   "family": "t3-web"
+  },
+  "devstral-2512": {
+   "tier": "mid",
+   "capabilities": [
+    "text"
+   ],
+   "family": "puter"
+  },
+  "devstral-latest": {
+   "tier": "mid",
+   "capabilities": [
+    "text"
+   ],
+   "family": "mistral"
+  },
+  "dgridai/free": {
+   "tier": "mid",
+   "capabilities": [
+    "text"
+   ],
+   "family": "dgrid"
+  },
+  "dolphin": {
+   "tier": "mid",
+   "capabilities": [
+    "text"
+   ],
+   "context_length": 16384,
+   "family": "nlpcloud"
+  },
+  "doubao-1-5-pro-32k-250115": {
+   "tier": "top",
+   "capabilities": [
+    "text"
+   ],
+   "context_length": 32768,
+   "family": "doubao"
+  },
+  "doubao-pro-32k": {
+   "tier": "top",
+   "capabilities": [
+    "text"
+   ],
+   "family": "doubao"
+  },
+  "doubao-seed-1-6-251015": {
+   "tier": "mid",
+   "capabilities": [
+    "text"
+   ],
+   "context_length": 262144,
+   "family": "doubao"
+  },
+  "doubao-seed-1-6-flash-250828": {
+   "tier": "mid",
+   "capabilities": [
+    "text"
+   ],
+   "context_length": 262144,
+   "family": "doubao"
+  },
+  "doubao-seed-1-8-251228": {
+   "tier": "mid",
+   "capabilities": [
+    "text"
+   ],
+   "context_length": 262144,
+   "family": "doubao"
+  },
+  "doubao-seed-2-0-code-preview-260215": {
+   "tier": "mid",
+   "capabilities": [
+    "text"
+   ],
+   "context_length": 262144,
+   "family": "doubao"
+  },
+  "doubao-seed-2-0-lite-260215": {
+   "tier": "lite",
+   "capabilities": [
+    "text"
+   ],
+   "context_length": 262144,
+   "family": "doubao"
+  },
+  "doubao-seed-2-0-mini-260215": {
+   "tier": "lite",
+   "capabilities": [
+    "text"
+   ],
+   "context_length": 262144,
+   "family": "doubao"
+  },
+  "doubao-seed-2-0-pro-260215": {
+   "tier": "top",
+   "capabilities": [
+    "text"
+   ],
+   "context_length": 262144,
+   "family": "doubao"
+  },
+  "ernie-3.5-8k": {
+   "tier": "mid",
+   "capabilities": [
+    "text"
+   ],
+   "context_length": 8192,
+   "family": "baidu"
+  },
+  "ernie-4.0-8k": {
+   "tier": "mid",
+   "capabilities": [
+    "text"
+   ],
+   "family": "baidu"
+  },
+  "ernie-4.0-turbo-128k": {
+   "tier": "mid",
+   "capabilities": [
+    "text"
+   ],
+   "context_length": 131072,
+   "family": "baidu"
+  },
+  "ernie-4.0-turbo-8k": {
+   "tier": "mid",
+   "capabilities": [
+    "text"
+   ],
+   "context_length": 8192,
+   "family": "baidu"
+  },
+  "ernie-4.5-0.3b": {
+   "tier": "mid",
+   "capabilities": [
+    "text"
+   ],
+   "context_length": 131072,
+   "family": "baidu"
+  },
+  "ernie-4.5-21b-a3b": {
+   "tier": "mid",
+   "capabilities": [
+    "text"
+   ],
+   "context_length": 131072,
+   "family": "baidu"
+  },
+  "ernie-4.5-turbo-128k": {
+   "tier": "mid",
+   "capabilities": [
+    "text"
+   ],
+   "context_length": 131072,
+   "family": "baidu"
+  },
+  "ernie-4.5-turbo-32k": {
+   "tier": "mid",
+   "capabilities": [
+    "text"
+   ],
+   "context_length": 32768,
+   "family": "baidu"
+  },
+  "ernie-4.5-turbo-vl": {
+   "tier": "mid",
+   "capabilities": [
+    "text",
+    "vision"
+   ],
+   "context_length": 131072,
+   "family": "baidu"
+  },
+  "ernie-5.0": {
+   "tier": "mid",
+   "capabilities": [
+    "text"
+   ],
+   "context_length": 131072,
+   "family": "baidu"
+  },
+  "ernie-5.0-thinking-latest": {
+   "tier": "mid",
+   "capabilities": [
+    "reasoning",
+    "text"
+   ],
+   "family": "qianfan"
+  },
+  "ernie-5.1": {
+   "tier": "mid",
+   "capabilities": [
+    "text"
+   ],
+   "context_length": 131072,
+   "family": "baidu"
+  },
+  "ernie-lite-8k": {
+   "tier": "lite",
+   "capabilities": [
+    "text"
+   ],
+   "context_length": 8192,
+   "family": "baidu"
+  },
+  "ernie-speed-128k": {
+   "tier": "mid",
+   "capabilities": [
+    "text"
+   ],
+   "context_length": 131072,
+   "family": "baidu"
+  },
+  "ernie-speed-8k": {
+   "tier": "mid",
+   "capabilities": [
+    "text"
+   ],
+   "context_length": 8192,
+   "family": "baidu"
+  },
+  "ernie-tiny-8k": {
+   "tier": "lite",
+   "capabilities": [
+    "text"
+   ],
+   "context_length": 8192,
+   "family": "baidu"
+  },
+  "ernie-x1.1": {
+   "tier": "mid",
+   "capabilities": [
+    "text"
+   ],
+   "context_length": 32768,
+   "family": "baidu"
+  },
+  "expert": {
+   "tier": "mid",
+   "capabilities": [
+    "text"
+   ],
+   "family": "grok-web"
+  },
+  "fable-5": {
+   "tier": "mid",
+   "capabilities": [
+    "text"
+   ],
+   "context_length": 200000,
+   "family": "auggie"
+  },
+  "fast": {
+   "tier": "mid",
+   "capabilities": [
+    "text"
+   ],
+   "family": "grok-web"
+  },
+  "felo-chat": {
+   "tier": "mid",
+   "capabilities": [
+    "text"
+   ],
+   "family": "felo-web"
+  },
+  "felo-document": {
+   "tier": "mid",
+   "capabilities": [
+    "text"
+   ],
+   "family": "felo-web"
+  },
+  "felo-scholar": {
+   "tier": "mid",
+   "capabilities": [
+    "text"
+   ],
+   "family": "felo-web"
+  },
+  "felo-search": {
+   "tier": "mid",
+   "capabilities": [
+    "text"
+   ],
+   "family": "felo-web"
+  },
+  "felo-social": {
+   "tier": "mid",
+   "capabilities": [
+    "text"
+   ],
+   "family": "felo-web"
+  },
+  "finetuned-llama-3-70b": {
+   "tier": "mid",
+   "capabilities": [
+    "text"
+   ],
+   "family": "nlpcloud"
+  },
+  "gemini": {
+   "tier": "lite",
+   "capabilities": [
+    "text"
+   ],
+   "family": "pollinations"
+  },
+  "gemini-1.5-pro": {
+   "tier": "top",
+   "capabilities": [
+    "text"
+   ],
+   "family": "aimlapi"
+  },
+  "gemini-2-5-pro": {
+   "tier": "top",
+   "capabilities": [
+    "text"
+   ],
+   "family": "kie"
+  },
+  "gemini-2.0-flash": {
+   "tier": "mid",
+   "capabilities": [
+    "text"
+   ],
+   "family": "bluesminds"
+  },
+  "gemini-2.0-flash-exp": {
+   "tier": "mid",
+   "capabilities": [
+    "text"
+   ],
+   "family": "bluesminds"
+  },
+  "gemini-2.5-flash": {
+   "tier": "mid",
+   "capabilities": [
+    "vision"
+   ],
+   "family": "gemini"
+  },
+  "gemini-2.5-flash-lite": {
+   "tier": "mid",
+   "capabilities": [
+    "vision"
+   ],
+   "family": "gemini"
+  },
+  "gemini-2.5-pro": {
+   "tier": "top",
+   "capabilities": [
+    "text"
+   ],
+   "context_length": 1048576,
+   "family": "bluesminds"
+  },
+  "gemini-3-1-pro": {
+   "tier": "top",
+   "capabilities": [
+    "text"
+   ],
+   "family": "kie"
+  },
+  "gemini-3-5-flash": {
+   "tier": "mid",
+   "capabilities": [
+    "text"
+   ],
+   "family": "kie"
+  },
+  "gemini-3-flash": {
+   "tier": "mid",
+   "capabilities": [
+    "text"
+   ],
+   "family": "cursor"
+  },
+  "gemini-3-flash-preview": {
+   "tier": "mid",
+   "capabilities": [
+    "text"
+   ],
+   "family": "bazaarlink"
+  },
+  "gemini-3-flash-solo": {
+   "tier": "mid",
+   "capabilities": [
+    "text"
+   ],
+   "family": "trae"
+  },
+  "gemini-3.0-flash-high": {
+   "tier": "mid",
+   "capabilities": [
+    "text"
+   ],
+   "context_length": 1000000,
+   "family": "windsurf"
+  },
+  "gemini-3.0-flash-low": {
+   "tier": "mid",
+   "capabilities": [
+    "text"
+   ],
+   "context_length": 1000000,
+   "family": "windsurf"
+  },
+  "gemini-3.0-flash-medium": {
+   "tier": "mid",
+   "capabilities": [
+    "text"
+   ],
+   "context_length": 1000000,
+   "family": "windsurf"
+  },
+  "gemini-3.0-flash-minimal": {
+   "tier": "mid",
+   "capabilities": [
+    "text"
+   ],
+   "context_length": 1000000,
+   "family": "windsurf"
+  },
+  "gemini-3.0-pro": {
+   "tier": "top",
+   "capabilities": [
+    "text"
+   ],
+   "family": "poe"
+  },
+  "gemini-3.1-flash-lite": {
+   "tier": "mid",
+   "capabilities": [
+    "vision"
+   ],
+   "family": "gemini"
+  },
+  "gemini-3.1-flash-lite-preview": {
+   "tier": "mid",
+   "capabilities": [
+    "text"
+   ],
+   "family": "bazaarlink"
+  },
+  "gemini-3.1-flash-tts-preview": {
+   "tier": "mid",
+   "capabilities": [
+    "audio"
+   ],
+   "family": "gemini"
+  },
+  "gemini-3.1-pro": {
+   "tier": "top",
+   "capabilities": [
+    "text"
+   ],
+   "family": "cursor"
+  },
+  "gemini-3.1-pro-high": {
+   "tier": "top",
+   "capabilities": [
+    "text"
+   ],
+   "context_length": 1000000,
+   "family": "windsurf"
+  },
+  "gemini-3.1-pro-low": {
+   "tier": "top",
+   "capabilities": [
+    "text"
+   ],
+   "context_length": 1000000,
+   "family": "windsurf"
+  },
+  "gemini-3.1-pro-preview": {
+   "tier": "top",
+   "capabilities": [
+    "text"
+   ],
+   "context_length": 1000000,
+   "family": "auggie"
+  },
+  "gemini-fast": {
+   "tier": "lite",
+   "capabilities": [
+    "text"
+   ],
+   "family": "pollinations"
+  },
+  "gemini-flash-lite-3.1": {
+   "tier": "mid",
+   "capabilities": [
+    "text"
+   ],
+   "family": "pollinations"
+  },
+  "gemini-large": {
+   "tier": "top",
+   "capabilities": [
+    "text"
+   ],
+   "family": "pollinations"
+  },
+  "gemini-search": {
+   "tier": "lite",
+   "capabilities": [
+    "text"
+   ],
+   "family": "pollinations"
+  },
+  "gemini_1_5_flash": {
+   "tier": "mid",
+   "capabilities": [
+    "text"
+   ],
+   "context_length": 1000000,
+   "family": "theoldllm"
+  },
+  "gemini_2_0_flash": {
+   "tier": "mid",
+   "capabilities": [
+    "text"
+   ],
+   "context_length": 1000000,
+   "family": "theoldllm"
+  },
+  "gemini_2_5_pro": {
+   "tier": "top",
+   "capabilities": [
+    "text"
+   ],
+   "context_length": 1000000,
+   "family": "theoldllm"
+  },
+  "gemini_3_flash": {
+   "tier": "mid",
+   "capabilities": [
+    "text"
+   ],
+   "context_length": 1000000,
+   "family": "theoldllm"
+  },
+  "gemini_3_pro": {
+   "tier": "top",
+   "capabilities": [
+    "text"
+   ],
+   "context_length": 1000000,
+   "family": "theoldllm"
+  },
+  "gemma-4-31b": {
+   "tier": "mid",
+   "capabilities": [
+    "text"
+   ],
+   "family": "cerebras"
+  },
+  "gemma-4-31b-it": {
+   "tier": "mid",
+   "capabilities": [
+    "text"
+   ],
+   "family": "bazaarlink"
+  },
+  "gemma3:4b": {
+   "tier": "mid",
+   "capabilities": [
+    "text"
+   ],
+   "family": "g4f-ollama"
+  },
+  "gemma4:31b": {
+   "tier": "mid",
+   "capabilities": [
+    "text"
+   ],
+   "family": "ollama-cloud"
+  },
+  "gen2": {
+   "tier": "mid",
+   "capabilities": [
+    "text"
+   ],
+   "family": "haiper"
+  },
+  "gen2-image": {
+   "tier": "mid",
+   "capabilities": [
+    "image"
+   ],
+   "family": "haiper"
+  },
+  "generalv3": {
+   "tier": "mid",
+   "capabilities": [
+    "text"
+   ],
+   "context_length": 8192,
+   "family": "iflytek"
+  },
+  "generalv3.5": {
+   "tier": "mid",
+   "capabilities": [
+    "text"
+   ],
+   "family": "iflytek"
+  },
+  "glm": {
+   "tier": "mid",
+   "capabilities": [
+    "text"
+   ],
+   "family": "pollinations"
+  },
+  "glm-4-flash": {
+   "tier": "mid",
+   "capabilities": [
+    "text"
+   ],
+   "family": "bluesminds"
+  },
+  "glm-4.5": {
+   "tier": "mid",
+   "capabilities": [
+    "text"
+   ],
+   "family": "zai-web"
+  },
+  "glm-4.5v": {
+   "tier": "mid",
+   "capabilities": [
+    "text"
+   ],
+   "family": "zai-web"
+  },
+  "glm-4.6": {
+   "tier": "mid",
+   "capabilities": [
+    "text"
+   ],
+   "family": "zai-web"
+  },
+  "glm-4.7": {
+   "tier": "mid",
+   "capabilities": [
+    "text"
+   ],
+   "family": "bluesminds"
+  },
+  "glm-5": {
+   "tier": "mid",
+   "capabilities": [
+    "text"
+   ],
+   "family": "bazaarlink"
+  },
+  "glm-5-turbo": {
+   "tier": "mid",
+   "capabilities": [
+    "text"
+   ],
+   "family": "zai"
+  },
+  "glm-5.0": {
+   "tier": "mid",
+   "capabilities": [
+    "reasoning"
+   ],
+   "context_length": 200000,
+   "family": "codebuddy-cn"
+  },
+  "glm-5.0-turbo": {
+   "tier": "mid",
+   "capabilities": [
+    "reasoning"
+   ],
+   "context_length": 200000,
+   "family": "codebuddy-cn"
+  },
+  "glm-5.1-precision": {
+   "tier": "mid",
+   "capabilities": [
+    "reasoning"
+   ],
+   "family": "crof"
+  },
+  "glm-5p1": {
+   "tier": "mid",
+   "capabilities": [
+    "text"
+   ],
+   "family": "fireworks"
+  },
+  "glm-5v-turbo": {
+   "tier": "mid",
+   "capabilities": [
+    "reasoning",
+    "vision"
+   ],
+   "context_length": 200000,
+   "family": "codebuddy-cn"
+  },
+  "google/gemma-2-2b-it": {
+   "tier": "lite",
+   "capabilities": [
+    "text"
+   ],
+   "family": "nvidia"
+  },
+  "google/gemma-2-9b-it": {
+   "tier": "lite",
+   "capabilities": [
+    "text"
+   ],
+   "family": "huggingface"
+  },
+  "google/gemma-3-4b-pt": {
+   "tier": "lite",
+   "capabilities": [
+    "text"
+   ],
+   "family": "pioneer"
+  },
+  "google/gemma-3n-e2b-it": {
+   "tier": "mid",
+   "capabilities": [
+    "text"
+   ],
+   "family": "nvidia"
+  },
+  "google/gemma-4-31b-it:free": {
+   "tier": "mid",
+   "capabilities": [
+    "reasoning",
+    "vision"
+   ],
+   "context_length": 262144,
+   "family": "cline"
+  },
+  "gpt-4": {
+   "tier": "mid",
+   "capabilities": [
+    "text"
+   ],
+   "family": "copilot-web"
+  },
+  "gpt-4-0125-preview": {
+   "tier": "mid",
+   "capabilities": [
+    "text"
+   ],
+   "context_length": 128000,
+   "family": "ghe-copilot"
+  },
+  "gpt-4-turbo": {
+   "tier": "mid",
+   "capabilities": [
+    "text"
+   ],
+   "family": "copilot-web"
+  },
+  "gpt-4.1": {
+   "tier": "mid",
+   "capabilities": [
+    "text"
+   ],
+   "family": "bluesminds"
+  },
+  "gpt-4.1-mini": {
+   "tier": "lite",
+   "capabilities": [
+    "text"
+   ],
+   "family": "bluesminds"
+  },
+  "gpt-4.1-nano": {
+   "tier": "lite",
+   "capabilities": [
+    "text"
+   ],
+   "family": "bluesminds"
+  },
+  "gpt-4.1-nano-2025-04-14": {
+   "tier": "lite",
+   "capabilities": [
+    "text"
+   ],
+   "family": "llm7"
+  },
+  "gpt-4o": {
+   "tier": "mid",
+   "capabilities": [
+    "text"
+   ],
+   "family": "aimlapi"
+  },
+  "gpt-4o-2024-11-20": {
+   "tier": "mid",
+   "capabilities": [
+    "text"
+   ],
+   "context_length": 128000,
+   "family": "ghe-copilot"
+  },
+  "gpt-4o-mini": {
+   "tier": "lite",
+   "capabilities": [
+    "text"
+   ],
+   "family": "bluesminds"
+  },
+  "gpt-4o-mini-2024-07-18": {
+   "tier": "lite",
+   "capabilities": [
+    "text"
+   ],
+   "family": "llm7"
+  },
+  "gpt-5": {
+   "tier": "mid",
+   "capabilities": [
+    "text"
+   ],
+   "family": "t3-web"
+  },
+  "gpt-5-2": {
+   "tier": "mid",
+   "capabilities": [
+    "text"
+   ],
+   "family": "kie"
+  },
+  "gpt-5-4": {
+   "tier": "mid",
+   "capabilities": [
+    "text"
+   ],
+   "family": "kie"
+  },
+  "gpt-5-5": {
+   "tier": "mid",
+   "capabilities": [
+    "text"
+   ],
+   "family": "kie"
+  },
+  "gpt-5-mini": {
+   "tier": "lite",
+   "capabilities": [
+    "text"
+   ],
+   "context_length": 264000,
+   "family": "ghe-copilot"
+  },
+  "gpt-5.2": {
+   "tier": "mid",
+   "capabilities": [
+    "text"
+   ],
+   "family": "cursor"
+  },
+  "gpt-5.2-fast": {
+   "tier": "mid",
+   "capabilities": [
+    "text"
+   ],
+   "family": "cursor"
+  },
+  "gpt-5.2-high": {
+   "tier": "mid",
+   "capabilities": [
+    "text"
+   ],
+   "family": "cursor"
+  },
+  "gpt-5.2-high-fast": {
+   "tier": "mid",
+   "capabilities": [
+    "text"
+   ],
+   "family": "cursor"
+  },
+  "gpt-5.2-low": {
+   "tier": "mid",
+   "capabilities": [
+    "text"
+   ],
+   "family": "cursor"
+  },
+  "gpt-5.2-low-fast": {
+   "tier": "mid",
+   "capabilities": [
+    "text"
+   ],
+   "family": "cursor"
+  },
+  "gpt-5.2-medium": {
+   "tier": "mid",
+   "capabilities": [
+    "text"
+   ],
+   "context_length": 200000,
+   "family": "windsurf"
+  },
+  "gpt-5.2-none": {
+   "tier": "mid",
+   "capabilities": [
+    "text"
+   ],
+   "context_length": 200000,
+   "family": "windsurf"
+  },
+  "gpt-5.2-xhigh": {
+   "tier": "mid",
+   "capabilities": [
+    "text"
+   ],
+   "family": "cursor"
+  },
+  "gpt-5.2-xhigh-fast": {
+   "tier": "mid",
+   "capabilities": [
+    "text"
+   ],
+   "family": "cursor"
+  },
+  "gpt-5.3-codex": {
+   "tier": "mid",
+   "capabilities": [
+    "text"
+   ],
+   "family": "blackbox"
+  },
+  "gpt-5.3-codex-fast": {
+   "tier": "mid",
+   "capabilities": [
+    "text"
+   ],
+   "family": "cursor"
+  },
+  "gpt-5.3-codex-high": {
+   "tier": "mid",
+   "capabilities": [
+    "text"
+   ],
+   "family": "cursor"
+  },
+  "gpt-5.3-codex-high-fast": {
+   "tier": "mid",
+   "capabilities": [
+    "text"
+   ],
+   "family": "cursor"
+  },
+  "gpt-5.3-codex-low": {
+   "tier": "mid",
+   "capabilities": [
+    "text"
+   ],
+   "family": "cursor"
+  },
+  "gpt-5.3-codex-low-fast": {
+   "tier": "mid",
+   "capabilities": [
+    "text"
+   ],
+   "family": "cursor"
+  },
+  "gpt-5.3-codex-medium": {
+   "tier": "mid",
+   "capabilities": [
+    "text"
+   ],
+   "context_length": 200000,
+   "family": "windsurf"
+  },
+  "gpt-5.3-codex-medium-fast": {
+   "tier": "mid",
+   "capabilities": [
+    "text"
+   ],
+   "context_length": 200000,
+   "family": "windsurf"
+  },
+  "gpt-5.3-codex-spark": {
+   "tier": "mid",
+   "capabilities": [
+    "text"
+   ],
+   "family": "codex"
+  },
+  "gpt-5.3-codex-spark-preview": {
+   "tier": "mid",
+   "capabilities": [
+    "text"
+   ],
+   "family": "cursor"
+  },
+  "gpt-5.3-codex-spark-preview-high": {
+   "tier": "mid",
+   "capabilities": [
+    "text"
+   ],
+   "family": "cursor"
+  },
+  "gpt-5.3-codex-spark-preview-low": {
+   "tier": "mid",
+   "capabilities": [
+    "text"
+   ],
+   "family": "cursor"
+  },
+  "gpt-5.3-codex-spark-preview-xhigh": {
+   "tier": "mid",
+   "capabilities": [
+    "text"
+   ],
+   "family": "cursor"
+  },
+  "gpt-5.3-codex-xhigh": {
+   "tier": "mid",
+   "capabilities": [
+    "text"
+   ],
+   "family": "cursor"
+  },
+  "gpt-5.3-codex-xhigh-fast": {
+   "tier": "mid",
+   "capabilities": [
+    "text"
+   ],
+   "family": "cursor"
+  },
+  "gpt-5.4": {
+   "tier": "mid",
+   "capabilities": [
+    "text"
+   ],
+   "family": "bazaarlink"
+  },
+  "gpt-5.4-high": {
+   "tier": "mid",
+   "capabilities": [
+    "text"
+   ],
+   "family": "cursor"
+  },
+  "gpt-5.4-high-fast": {
+   "tier": "mid",
+   "capabilities": [
+    "text"
+   ],
+   "family": "cursor"
+  },
+  "gpt-5.4-low": {
+   "tier": "mid",
+   "capabilities": [
+    "text"
+   ],
+   "family": "cursor"
+  },
+  "gpt-5.4-low-fast": {
+   "tier": "mid",
+   "capabilities": [
+    "text"
+   ],
+   "family": "cursor"
+  },
+  "gpt-5.4-medium": {
+   "tier": "mid",
+   "capabilities": [
+    "text"
+   ],
+   "family": "cursor"
+  },
+  "gpt-5.4-medium-fast": {
+   "tier": "mid",
+   "capabilities": [
+    "text"
+   ],
+   "family": "cursor"
+  },
+  "gpt-5.4-mini": {
+   "tier": "lite",
+   "capabilities": [
+    "text"
+   ],
+   "family": "bazaarlink"
+  },
+  "gpt-5.4-mini-high": {
+   "tier": "lite",
+   "capabilities": [
+    "text"
+   ],
+   "family": "cursor"
+  },
+  "gpt-5.4-mini-low": {
+   "tier": "lite",
+   "capabilities": [
+    "text"
+   ],
+   "family": "cursor"
+  },
+  "gpt-5.4-mini-medium": {
+   "tier": "mid",
+   "capabilities": [
+    "text"
+   ],
+   "family": "cursor"
+  },
+  "gpt-5.4-mini-none": {
+   "tier": "lite",
+   "capabilities": [
+    "text"
+   ],
+   "family": "cursor"
+  },
+  "gpt-5.4-mini-xhigh": {
+   "tier": "lite",
+   "capabilities": [
+    "text"
+   ],
+   "family": "cursor"
+  },
+  "gpt-5.4-nano": {
+   "tier": "lite",
+   "capabilities": [
+    "text"
+   ],
+   "family": "bazaarlink"
+  },
+  "gpt-5.4-nano-high": {
+   "tier": "lite",
+   "capabilities": [
+    "text"
+   ],
+   "family": "cursor"
+  },
+  "gpt-5.4-nano-low": {
+   "tier": "lite",
+   "capabilities": [
+    "text"
+   ],
+   "family": "cursor"
+  },
+  "gpt-5.4-nano-medium": {
+   "tier": "mid",
+   "capabilities": [
+    "text"
+   ],
+   "family": "cursor"
+  },
+  "gpt-5.4-nano-none": {
+   "tier": "lite",
+   "capabilities": [
+    "text"
+   ],
+   "family": "cursor"
+  },
+  "gpt-5.4-nano-xhigh": {
+   "tier": "lite",
+   "capabilities": [
+    "text"
+   ],
+   "family": "cursor"
+  },
+  "gpt-5.4-none": {
+   "tier": "mid",
+   "capabilities": [
+    "text"
+   ],
+   "context_length": 200000,
+   "family": "windsurf"
+  },
+  "gpt-5.4-none-fast": {
+   "tier": "mid",
+   "capabilities": [
+    "text"
+   ],
+   "context_length": 200000,
+   "family": "windsurf"
+  },
+  "gpt-5.4-pro": {
+   "tier": "top",
+   "capabilities": [
+    "text"
+   ],
+   "family": "blackbox"
+  },
+  "gpt-5.4-xhigh": {
+   "tier": "mid",
+   "capabilities": [
+    "text"
+   ],
+   "family": "cursor"
+  },
+  "gpt-5.4-xhigh-fast": {
+   "tier": "mid",
+   "capabilities": [
+    "text"
+   ],
+   "family": "cursor"
+  },
+  "gpt-5.5": {
+   "tier": "mid",
+   "capabilities": [
+    "text"
+   ],
+   "family": "bazaarlink"
+  },
+  "gpt-5.5-extra-high": {
+   "tier": "mid",
+   "capabilities": [
+    "text"
+   ],
+   "family": "cursor"
+  },
+  "gpt-5.5-extra-high-fast": {
+   "tier": "mid",
+   "capabilities": [
+    "text"
+   ],
+   "family": "cursor"
+  },
+  "gpt-5.5-high": {
+   "tier": "mid",
+   "capabilities": [
+    "text"
+   ],
+   "context_length": 400000,
+   "family": "codex"
+  },
+  "gpt-5.5-high-fast": {
+   "tier": "mid",
+   "capabilities": [
+    "text"
+   ],
+   "family": "cursor"
+  },
+  "gpt-5.5-low": {
+   "tier": "mid",
+   "capabilities": [
+    "text"
+   ],
+   "context_length": 400000,
+   "family": "codex"
+  },
+  "gpt-5.5-low-fast": {
+   "tier": "mid",
+   "capabilities": [
+    "text"
+   ],
+   "family": "cursor"
+  },
+  "gpt-5.5-medium": {
+   "tier": "mid",
+   "capabilities": [
+    "text"
+   ],
+   "context_length": 400000,
+   "family": "codex"
+  },
+  "gpt-5.5-medium-fast": {
+   "tier": "mid",
+   "capabilities": [
+    "text"
+   ],
+   "family": "cursor"
+  },
+  "gpt-5.5-none": {
+   "tier": "mid",
+   "capabilities": [
+    "text"
+   ],
+   "family": "cursor"
+  },
+  "gpt-5.5-none-fast": {
+   "tier": "mid",
+   "capabilities": [
+    "text"
+   ],
+   "family": "cursor"
+  },
+  "gpt-5.5-pro": {
+   "tier": "top",
+   "capabilities": [
+    "text"
+   ],
+   "family": "chatgpt-web"
+  },
+  "gpt-5.5-pro-extended": {
+   "tier": "top",
+   "capabilities": [
+    "text"
+   ],
+   "family": "chatgpt-web"
+  },
+  "gpt-5.5-thinking": {
+   "tier": "mid",
+   "capabilities": [
+    "reasoning",
+    "text"
+   ],
+   "family": "chatgpt-web"
+  },
+  "gpt-5.5-xhigh": {
+   "tier": "mid",
+   "capabilities": [
+    "text"
+   ],
+   "context_length": 400000,
+   "family": "codex"
+  },
+  "gpt-5.5-xhigh-fast": {
+   "tier": "mid",
+   "capabilities": [
+    "text"
+   ],
+   "context_length": 200000,
+   "family": "windsurf"
+  },
+  "gpt-5.6": {
+   "tier": "mid",
+   "capabilities": [
+    "text"
+   ],
+   "family": "openai"
+  },
+  "gpt-5.6-luna": {
+   "tier": "mid",
+   "capabilities": [
+    "text"
+   ],
+   "family": "codex"
+  },
+  "gpt-5.6-luna-high": {
+   "tier": "mid",
+   "capabilities": [
+    "text"
+   ],
+   "family": "codex"
+  },
+  "gpt-5.6-luna-low": {
+   "tier": "mid",
+   "capabilities": [
+    "text"
+   ],
+   "family": "codex"
+  },
+  "gpt-5.6-luna-max": {
+   "tier": "top",
+   "capabilities": [
+    "text"
+   ],
+   "family": "codex"
+  },
+  "gpt-5.6-luna-medium": {
+   "tier": "mid",
+   "capabilities": [
+    "text"
+   ],
+   "family": "codex"
+  },
+  "gpt-5.6-luna-xhigh": {
+   "tier": "mid",
+   "capabilities": [
+    "text"
+   ],
+   "family": "codex"
+  },
+  "gpt-5.6-pro": {
+   "tier": "top",
+   "capabilities": [
+    "text"
+   ],
+   "family": "chatgpt-web"
+  },
+  "gpt-5.6-sol": {
+   "tier": "mid",
+   "capabilities": [
+    "text"
+   ],
+   "family": "codex"
+  },
+  "gpt-5.6-sol-high": {
+   "tier": "mid",
+   "capabilities": [
+    "text"
+   ],
+   "family": "codex"
+  },
+  "gpt-5.6-sol-low": {
+   "tier": "mid",
+   "capabilities": [
+    "text"
+   ],
+   "family": "codex"
+  },
+  "gpt-5.6-sol-max": {
+   "tier": "top",
+   "capabilities": [
+    "text"
+   ],
+   "family": "codex"
+  },
+  "gpt-5.6-sol-medium": {
+   "tier": "mid",
+   "capabilities": [
+    "text"
+   ],
+   "family": "codex"
+  },
+  "gpt-5.6-sol-ultra": {
+   "tier": "top",
+   "capabilities": [
+    "text"
+   ],
+   "family": "codex"
+  },
+  "gpt-5.6-sol-xhigh": {
+   "tier": "mid",
+   "capabilities": [
+    "text"
+   ],
+   "family": "codex"
+  },
+  "gpt-5.6-terra": {
+   "tier": "mid",
+   "capabilities": [
+    "text"
+   ],
+   "family": "codex"
+  },
+  "gpt-5.6-terra-high": {
+   "tier": "mid",
+   "capabilities": [
+    "text"
+   ],
+   "family": "codex"
+  },
+  "gpt-5.6-terra-low": {
+   "tier": "mid",
+   "capabilities": [
+    "text"
+   ],
+   "family": "codex"
+  },
+  "gpt-5.6-terra-max": {
+   "tier": "top",
+   "capabilities": [
+    "text"
+   ],
+   "family": "codex"
+  },
+  "gpt-5.6-terra-medium": {
+   "tier": "mid",
+   "capabilities": [
+    "text"
+   ],
+   "family": "codex"
+  },
+  "gpt-5.6-terra-ultra": {
+   "tier": "top",
+   "capabilities": [
+    "text"
+   ],
+   "family": "codex"
+  },
+  "gpt-5.6-terra-xhigh": {
+   "tier": "mid",
+   "capabilities": [
+    "text"
+   ],
+   "family": "codex"
+  },
+  "gpt-5.6-thinking": {
+   "tier": "mid",
+   "capabilities": [
+    "reasoning",
+    "text"
+   ],
+   "family": "chatgpt-web"
+  },
+  "gpt-oss-20b": {
+   "tier": "mid",
+   "capabilities": [
+    "text"
+   ],
+   "family": "fireworks"
+  },
+  "gpt5": {
+   "tier": "mid",
+   "capabilities": [
+    "text"
+   ],
+   "context_length": 200000,
+   "family": "auggie"
+  },
+  "gpt5.1": {
+   "tier": "mid",
+   "capabilities": [
+    "text"
+   ],
+   "context_length": 200000,
+   "family": "auggie"
+  },
+  "gpt5.2": {
+   "tier": "mid",
+   "capabilities": [
+    "text"
+   ],
+   "context_length": 200000,
+   "family": "auggie"
+  },
+  "gpt5.4": {
+   "tier": "mid",
+   "capabilities": [
+    "text"
+   ],
+   "context_length": 200000,
+   "family": "auggie"
+  },
+  "gpt5.4-mini": {
+   "tier": "lite",
+   "capabilities": [
+    "text"
+   ],
+   "context_length": 200000,
+   "family": "auggie"
+  },
+  "gpt5.5": {
+   "tier": "mid",
+   "capabilities": [
+    "text"
+   ],
+   "context_length": 200000,
+   "family": "auggie"
+  },
+  "gpt5.6-luna": {
+   "tier": "mid",
+   "capabilities": [
+    "text"
+   ],
+   "context_length": 200000,
+   "family": "auggie"
+  },
+  "gpt5.6-sol": {
+   "tier": "mid",
+   "capabilities": [
+    "text"
+   ],
+   "context_length": 200000,
+   "family": "auggie"
+  },
+  "gpt5.6-terra": {
+   "tier": "mid",
+   "capabilities": [
+    "text"
+   ],
+   "context_length": 200000,
+   "family": "auggie"
+  },
+  "grok": {
+   "tier": "mid",
+   "capabilities": [
+    "text"
+   ],
+   "family": "pollinations"
+  },
+  "grok-3": {
+   "tier": "mid",
+   "capabilities": [
+    "text"
+   ],
+   "context_length": 131072,
+   "family": "bluesminds"
+  },
+  "grok-3-mini": {
+   "tier": "lite",
+   "capabilities": [
+    "reasoning"
+   ],
+   "family": "inner-ai"
+  },
+  "grok-4.20": {
+   "tier": "mid",
+   "capabilities": [
+    "text"
+   ],
+   "family": "bazaarlink"
+  },
+  "grok-4.20-0309-non-reasoning": {
+   "tier": "mid",
+   "capabilities": [
+    "reasoning",
+    "text"
+   ],
+   "family": "xai"
+  },
+  "grok-4.20-0309-reasoning": {
+   "tier": "mid",
+   "capabilities": [
+    "reasoning",
+    "text"
+   ],
+   "family": "xai"
+  },
+  "grok-4.20-multi-agent-0309": {
+   "tier": "mid",
+   "capabilities": [
+    "text"
+   ],
+   "family": "xai"
+  },
+  "grok-4.3": {
+   "tier": "mid",
+   "capabilities": [
+    "text"
+   ],
+   "family": "bazaarlink"
+  },
+  "grok-4.5": {
+   "tier": "mid",
+   "capabilities": [
+    "reasoning"
+   ],
+   "context_length": 500000,
+   "family": "grok-cli"
+  },
+  "grok-4.5-fast-high": {
+   "tier": "mid",
+   "capabilities": [
+    "text"
+   ],
+   "family": "cursor"
+  },
+  "grok-4.5-fast-medium": {
+   "tier": "mid",
+   "capabilities": [
+    "text"
+   ],
+   "family": "cursor"
+  },
+  "grok-4.5-fast-xhigh": {
+   "tier": "mid",
+   "capabilities": [
+    "text"
+   ],
+   "family": "cursor"
+  },
+  "grok-4.5-high": {
+   "tier": "mid",
+   "capabilities": [
+    "text"
+   ],
+   "family": "cursor"
+  },
+  "grok-4.5-medium": {
+   "tier": "mid",
+   "capabilities": [
+    "text"
+   ],
+   "family": "cursor"
+  },
+  "grok-4.5-xhigh": {
+   "tier": "mid",
+   "capabilities": [
+    "text"
+   ],
+   "family": "cursor"
+  },
+  "grok-420-computer-use-sa": {
+   "tier": "mid",
+   "capabilities": [
+    "text"
+   ],
+   "family": "grok-web"
+  },
+  "grok-build-0.1": {
+   "tier": "mid",
+   "capabilities": [
+    "text"
+   ],
+   "context_length": 256000,
+   "family": "xai"
+  },
+  "grok-composer-2.5-fast": {
+   "tier": "mid",
+   "capabilities": [
+    "text"
+   ],
+   "context_length": 200000,
+   "family": "grok-cli"
+  },
+  "grok-large": {
+   "tier": "top",
+   "capabilities": [
+    "text"
+   ],
+   "family": "pollinations"
+  },
+  "haiku4.5": {
+   "tier": "mid",
+   "capabilities": [
+    "text"
+   ],
+   "context_length": 200000,
+   "family": "auggie"
+  },
+  "heavy": {
+   "tier": "mid",
+   "capabilities": [
+    "text"
+   ],
+   "family": "grok-web"
+  },
+  "hf:nvidia/NVIDIA-Nemotron-3-Super-120B-A12B-NVFP4": {
+   "tier": "mid",
+   "capabilities": [
+    "reasoning"
+   ],
+   "context_length": 262144,
+   "family": "synthetic"
+  },
+  "hunyuan": {
+   "tier": "mid",
+   "capabilities": [
+    "text"
+   ],
+   "family": "yuanbao-web"
+  },
+  "hunyuan-functioncall": {
+   "tier": "mid",
+   "capabilities": [
+    "text"
+   ],
+   "family": "tencent"
+  },
+  "hunyuan-lite": {
+   "tier": "lite",
+   "capabilities": [
+    "text"
+   ],
+   "family": "tencent"
+  },
+  "hunyuan-pro": {
+   "tier": "top",
+   "capabilities": [
+    "text"
+   ],
+   "family": "tencent"
+  },
+  "hunyuan-search": {
+   "tier": "mid",
+   "capabilities": [
+    "text"
+   ],
+   "family": "yuanbao-web"
+  },
+  "hunyuan-t1": {
+   "tier": "mid",
+   "capabilities": [
+    "reasoning"
+   ],
+   "family": "yuanbao-web"
+  },
+  "hunyuan-t1-latest": {
+   "tier": "mid",
+   "capabilities": [
+    "text"
+   ],
+   "context_length": 256000,
+   "family": "tencent"
+  },
+  "hunyuan-t1-search": {
+   "tier": "mid",
+   "capabilities": [
+    "reasoning"
+   ],
+   "family": "yuanbao-web"
+  },
+  "hunyuan-turbos-latest": {
+   "tier": "mid",
+   "capabilities": [
+    "text"
+   ],
+   "context_length": 200000,
+   "family": "tencent"
+  },
+  "hunyuan-vision": {
+   "tier": "mid",
+   "capabilities": [
+    "text",
+    "vision"
+   ],
+   "family": "tencent"
+  },
+  "hy3-free": {
+   "tier": "mid",
+   "capabilities": [
+    "text"
+   ],
+   "context_length": 131000,
+   "family": "opencode"
+  },
+  "hy3-preview": {
+   "tier": "mid",
+   "capabilities": [
+    "reasoning",
+    "vision"
+   ],
+   "context_length": 192000,
+   "family": "codebuddy-cn"
+  },
+  "inclusionai/ling-1t": {
+   "tier": "mid",
+   "capabilities": [
+    "text"
+   ],
+   "family": "zenmux-free"
+  },
+  "inclusionai/ling-mini-2.0": {
+   "tier": "lite",
+   "capabilities": [
+    "text"
+   ],
+   "family": "zenmux-free"
+  },
+  "inclusionai/ring-1t": {
+   "tier": "mid",
+   "capabilities": [
+    "text"
+   ],
+   "family": "zenmux-free"
+  },
+  "intern-latest": {
+   "tier": "mid",
+   "capabilities": [
+    "text"
+   ],
+   "family": "internlm"
+  },
+  "intern-s1": {
+   "tier": "mid",
+   "capabilities": [
+    "text"
+   ],
+   "family": "internlm"
+  },
+  "intern-s1-mini": {
+   "tier": "lite",
+   "capabilities": [
+    "text"
+   ],
+   "family": "internlm"
+  },
+  "intern-s1-pro": {
+   "tier": "top",
+   "capabilities": [
+    "text"
+   ],
+   "family": "internlm"
+  },
+  "internvl3.5-latest": {
+   "tier": "mid",
+   "capabilities": [
+    "text",
+    "vision"
+   ],
+   "family": "internlm"
+  },
+  "kilo-auto/balanced": {
+   "tier": "mid",
+   "capabilities": [
+    "text"
+   ],
+   "family": "kilo-gateway"
+  },
+  "kilo-auto/frontier": {
+   "tier": "mid",
+   "capabilities": [
+    "text"
+   ],
+   "family": "kilo-gateway"
+  },
+  "kimi": {
+   "tier": "mid",
+   "capabilities": [
+    "text"
+   ],
+   "family": "pollinations"
+  },
+  "kimi-k2": {
+   "tier": "mid",
+   "capabilities": [
+    "text"
+   ],
+   "family": "bluesminds"
+  },
+  "kimi-k2-thinking": {
+   "tier": "mid",
+   "capabilities": [
+    "reasoning",
+    "text"
+   ],
+   "family": "bluesminds"
+  },
+  "kimi-k2.5": {
+   "tier": "mid",
+   "capabilities": [
+    "text"
+   ],
+   "family": "bazaarlink"
+  },
+  "kimi-k2.5-lightning": {
+   "tier": "mid",
+   "capabilities": [
+    "reasoning"
+   ],
+   "family": "crof"
+  },
+  "kimi-k2.6-precision": {
+   "tier": "mid",
+   "capabilities": [
+    "reasoning"
+   ],
+   "family": "crof"
+  },
+  "kimi-k2.7": {
+   "tier": "mid",
+   "capabilities": [
+    "text"
+   ],
+   "context_length": 131000,
+   "family": "auggie"
+  },
+  "kimi-k2p5": {
+   "tier": "mid",
+   "capabilities": [
+    "text"
+   ],
+   "family": "fireworks"
+  },
+  "kimi-k2p6": {
+   "tier": "mid",
+   "capabilities": [
+    "text"
+   ],
+   "family": "fireworks"
+  },
+  "kuaishou/kat-coder-pro-v1-free": {
+   "tier": "top",
+   "capabilities": [
+    "text"
+   ],
+   "family": "zenmux-free"
+  },
+  "liquid-lfm-40b": {
+   "tier": "mid",
+   "capabilities": [
+    "text"
+   ],
+   "family": "liquid"
+  },
+  "lite": {
+   "tier": "lite",
+   "capabilities": [
+    "text"
+   ],
+   "context_length": 4096,
+   "family": "iflytek"
+  },
+  "llama-3-1-405b": {
+   "tier": "top",
+   "capabilities": [
+    "text"
+   ],
+   "family": "nlpcloud"
+  },
+  "llama-3-8b-instruct": {
+   "tier": "lite",
+   "capabilities": [
+    "text"
+   ],
+   "family": "nlpcloud"
+  },
+  "llama-3.1-70b-instruct": {
+   "tier": "mid",
+   "capabilities": [
+    "text"
+   ],
+   "family": "scaleway"
+  },
+  "llama-3.1-8b-instant": {
+   "tier": "lite",
+   "capabilities": [
+    "text"
+   ],
+   "family": "g4f-groq"
+  },
+  "llama-3.3-70b": {
+   "tier": "mid",
+   "capabilities": [
+    "text"
+   ],
+   "family": "t3-web"
+  },
+  "llama-3.3-70b-versatile": {
+   "tier": "mid",
+   "capabilities": [
+    "text"
+   ],
+   "family": "g4f-groq"
+  },
+  "llama-4-maverick": {
+   "tier": "mid",
+   "capabilities": [
+    "text"
+   ],
+   "family": "bazaarlink"
+  },
+  "llama-4-scout": {
+   "tier": "mid",
+   "capabilities": [
+    "text"
+   ],
+   "family": "bazaarlink"
+  },
+  "mai-code-1-flash": {
+   "tier": "mid",
+   "capabilities": [
+    "text"
+   ],
+   "context_length": 256000,
+   "family": "ghe-copilot"
+  },
+  "max-32k": {
+   "tier": "top",
+   "capabilities": [
+    "text"
+   ],
+   "context_length": 32768,
+   "family": "iflytek"
+  },
+  "mercury-2": {
+   "tier": "mid",
+   "capabilities": [
+    "text"
+   ],
+   "context_length": 128000,
+   "family": "inception"
+  },
+  "meta-llama/Llama-3.2-1B-Instruct": {
+   "tier": "lite",
+   "capabilities": [
+    "text"
+   ],
+   "family": "pioneer"
+  },
+  "meta-llama/Llama-4-Maverick-17B-128E-Instruct-FP8": {
+   "tier": "mid",
+   "capabilities": [
+    "vision"
+   ],
+   "family": "huggingchat"
+  },
+  "meta-llama/Llama-4-Scout-17B-16E-Instruct": {
+   "tier": "mid",
+   "capabilities": [
+    "vision"
+   ],
+   "family": "huggingchat"
+  },
+  "meta-llama/Meta-Llama-3.1-70B-Instruct-Turbo": {
+   "tier": "mid",
+   "capabilities": [
+    "text"
+   ],
+   "family": "aimlapi"
+  },
+  "meta-llama/Meta-Llama-3.1-8B-Instruct": {
+   "tier": "lite",
+   "capabilities": [
+    "text"
+   ],
+   "family": "monsterapi"
+  },
+  "meta-llama/llama-3.2-11b-instruct": {
+   "tier": "mid",
+   "capabilities": [
+    "text"
+   ],
+   "family": "huggingface"
+  },
+  "meta/llama-3.2-90b-vision-instruct": {
+   "tier": "mid",
+   "capabilities": [
+    "text",
+    "vision"
+   ],
+   "family": "nvidia"
+  },
+  "meta/llama-4-maverick-17b-128e-instruct": {
+   "tier": "mid",
+   "capabilities": [
+    "text"
+   ],
+   "family": "nvidia"
+  },
+  "meta/llama-guard-4-12b": {
+   "tier": "mid",
+   "capabilities": [
+    "text"
+   ],
+   "family": "nvidia"
+  },
+  "midijourney": {
+   "tier": "mid",
+   "capabilities": [
+    "text"
+   ],
+   "family": "pollinations"
+  },
+  "midijourney-large": {
+   "tier": "top",
+   "capabilities": [
+    "text"
+   ],
+   "family": "pollinations"
+  },
+  "mimo-v2.5-free": {
+   "tier": "mid",
+   "capabilities": [
+    "text"
+   ],
+   "context_length": 131000,
+   "family": "opencode"
+  },
+  "mimo-v2.5-pro-precision": {
+   "tier": "top",
+   "capabilities": [
+    "reasoning"
+   ],
+   "family": "crof"
+  },
+  "minimax": {
+   "tier": "top",
+   "capabilities": [
+    "text"
+   ],
+   "family": "pollinations"
+  },
+  "minimax-3": {
+   "tier": "top",
+   "capabilities": [
+    "text"
+   ],
+   "context_length": 128000,
+   "family": "tokenrouter"
+  },
+  "minimax-m2.1": {
+   "tier": "top",
+   "capabilities": [
+    "text"
+   ],
+   "family": "kiro"
+  },
+  "minimax-m2p5": {
+   "tier": "top",
+   "capabilities": [
+    "text"
+   ],
+   "family": "fireworks"
+  },
+  "minimax-m2p7": {
+   "tier": "top",
+   "capabilities": [
+    "text"
+   ],
+   "family": "fireworks"
+  },
+  "minimax/minimax-m2.5:free": {
+   "tier": "top",
+   "capabilities": [
+    "text"
+   ],
+   "family": "kilo-gateway"
+  },
+  "mistral": {
+   "tier": "mid",
+   "capabilities": [
+    "text"
+   ],
+   "family": "pollinations"
+  },
+  "mistral-large": {
+   "tier": "top",
+   "capabilities": [
+    "text"
+   ],
+   "family": "pollinations"
+  },
+  "mistral-large-2411": {
+   "tier": "top",
+   "capabilities": [
+    "text"
+   ],
+   "family": "inner-ai"
+  },
+  "mistral-large-2512": {
+   "tier": "top",
+   "capabilities": [
+    "text"
+   ],
+   "family": "bazaarlink"
+  },
+  "mistral-large-latest": {
+   "tier": "top",
+   "capabilities": [
+    "text"
+   ],
+   "family": "aimlapi"
+  },
+  "mistral-medium-3-5": {
+   "tier": "mid",
+   "capabilities": [
+    "text"
+   ],
+   "family": "mistral"
+  },
+  "mistral-medium-3.1": {
+   "tier": "mid",
+   "capabilities": [
+    "text"
+   ],
+   "family": "bazaarlink"
+  },
+  "mistral-nemo": {
+   "tier": "mid",
+   "capabilities": [
+    "text"
+   ],
+   "family": "puter"
+  },
+  "mistral-small-2603": {
+   "tier": "mid",
+   "capabilities": [
+    "text"
+   ],
+   "family": "bazaarlink"
+  },
+  "mistral-small-3.2-24b-instruct-2506": {
+   "tier": "mid",
+   "capabilities": [
+    "text"
+   ],
+   "family": "scaleway"
+  },
+  "mistral-small-latest": {
+   "tier": "mid",
+   "capabilities": [
+    "text"
+   ],
+   "family": "mistral"
+  },
+  "mistralai/devstral-2-123b-instruct-2512": {
+   "tier": "mid",
+   "capabilities": [
+    "text"
+   ],
+   "family": "nvidia"
+  },
+  "mistralai/ministral-14b-instruct-2512": {
+   "tier": "mid",
+   "capabilities": [
+    "text"
+   ],
+   "family": "nvidia"
+  },
+  "mistralai/mistral-7b-instruct": {
+   "tier": "lite",
+   "capabilities": [
+    "text"
+   ],
+   "family": "hackclub"
+  },
+  "mistralai/mistral-nemotron": {
+   "tier": "mid",
+   "capabilities": [
+    "text"
+   ],
+   "family": "nvidia"
+  },
+  "mistralai/mixtral-8x7b-instruct-v0.1": {
+   "tier": "mid",
+   "capabilities": [
+    "text"
+   ],
+   "family": "nvidia"
+  },
+  "muse-spark": {
+   "tier": "mid",
+   "capabilities": [
+    "text"
+   ],
+   "family": "muse-spark-web"
+  },
+  "muse-spark-contemplating": {
+   "tier": "mid",
+   "capabilities": [
+    "reasoning"
+   ],
+   "family": "muse-spark-web"
+  },
+  "muse-spark-thinking": {
+   "tier": "mid",
+   "capabilities": [
+    "reasoning",
+    "text"
+   ],
+   "family": "muse-spark-web"
+  },
+  "nemotron-3-super": {
+   "tier": "mid",
+   "capabilities": [
+    "text"
+   ],
+   "family": "ollama-cloud"
+  },
+  "nemotron-3-ultra-free": {
+   "tier": "top",
+   "capabilities": [
+    "text"
+   ],
+   "context_length": 1000000,
+   "family": "opencode"
+  },
+  "north-mini-code-free": {
+   "tier": "lite",
+   "capabilities": [
+    "text"
+   ],
+   "context_length": 131000,
+   "family": "opencode"
+  },
+  "nova": {
+   "tier": "mid",
+   "capabilities": [
+    "text"
+   ],
+   "family": "pollinations"
+  },
+  "nova-fast": {
+   "tier": "mid",
+   "capabilities": [
+    "text"
+   ],
+   "family": "pollinations"
+  },
+  "nvidia/NVIDIA-Nemotron-3-Ultra-550B-A55B-NVFP4": {
+   "tier": "top",
+   "capabilities": [
+    "reasoning"
+   ],
+   "family": "huggingchat"
+  },
+  "nvidia/ising-calibration-1-35b-a3b": {
+   "tier": "mid",
+   "capabilities": [
+    "reasoning"
+   ],
+   "family": "nvidia"
+  },
+  "nvidia/llama-3.1-nemoguard-8b-content-safety": {
+   "tier": "lite",
+   "capabilities": [
+    "text"
+   ],
+   "family": "nvidia"
+  },
+  "nvidia/llama-3.1-nemoguard-8b-topic-control": {
+   "tier": "lite",
+   "capabilities": [
+    "text"
+   ],
+   "family": "nvidia"
+  },
+  "nvidia/llama-3.1-nemotron-nano-8b-v1": {
+   "tier": "lite",
+   "capabilities": [
+    "text"
+   ],
+   "family": "nvidia"
+  },
+  "nvidia/llama-3.1-nemotron-safety-guard-8b-v3": {
+   "tier": "lite",
+   "capabilities": [
+    "text"
+   ],
+   "family": "nvidia"
+  },
+  "nvidia/llama-3.3-nemotron-super-49b-v1": {
+   "tier": "mid",
+   "capabilities": [
+    "text"
+   ],
+   "family": "nvidia"
+  },
+  "nvidia/llama-3.3-nemotron-super-49b-v1.5": {
+   "tier": "mid",
+   "capabilities": [
+    "text"
+   ],
+   "family": "nvidia"
+  },
+  "nvidia/nemotron-3-content-safety": {
+   "tier": "mid",
+   "capabilities": [
+    "text"
+   ],
+   "family": "nvidia"
+  },
+  "nvidia/nemotron-3-nano-30b-a3b": {
+   "tier": "lite",
+   "capabilities": [
+    "text"
+   ],
+   "family": "g4f-nvidia"
+  },
+  "nvidia/nemotron-3-nano-omni-30b-a3b-reasoning": {
+   "tier": "lite",
+   "capabilities": [
+    "reasoning",
+    "text",
+    "vision"
+   ],
+   "family": "nvidia"
+  },
+  "nvidia/nemotron-3-super-120b-a12b:free": {
+   "tier": "mid",
+   "capabilities": [
+    "text"
+   ],
+   "family": "kilo-gateway"
+  },
+  "nvidia/nemotron-3-ultra-550b-a55b:free": {
+   "tier": "top",
+   "capabilities": [
+    "reasoning"
+   ],
+   "context_length": 1000000,
+   "family": "cline"
+  },
+  "nvidia/nemotron-3.5-content-safety": {
+   "tier": "mid",
+   "capabilities": [
+    "text"
+   ],
+   "family": "nvidia"
+  },
+  "nvidia/nemotron-mini-4b-instruct": {
+   "tier": "lite",
+   "capabilities": [
+    "text"
+   ],
+   "family": "nvidia"
+  },
+  "nvidia/nvidia-nemotron-nano-9b-v2": {
+   "tier": "lite",
+   "capabilities": [
+    "reasoning"
+   ],
+   "family": "nvidia"
+  },
+  "nvidia/riva-translate-4b-instruct-v1.1": {
+   "tier": "lite",
+   "capabilities": [
+    "text"
+   ],
+   "family": "nvidia"
+  },
+  "o3": {
+   "tier": "mid",
+   "capabilities": [
+    "text"
+   ],
+   "family": "chatgpt-web"
+  },
+  "o3-mini": {
+   "tier": "lite",
+   "capabilities": [
+    "text"
+   ],
+   "context_length": 200000,
+   "family": "openai"
+  },
+  "o4-mini": {
+   "tier": "lite",
+   "capabilities": [
+    "reasoning"
+   ],
+   "family": "inner-ai"
+  },
+  "openai": {
+   "tier": "mid",
+   "capabilities": [
+    "text"
+   ],
+   "family": "g4f-pollinations"
+  },
+  "openai-fast": {
+   "tier": "mid",
+   "capabilities": [
+    "text"
+   ],
+   "family": "g4f-pollinations"
+  },
+  "openai-large": {
+   "tier": "top",
+   "capabilities": [
+    "text"
+   ],
+   "family": "pollinations"
+  },
+  "openai.gpt-oss-120b-1:0": {
+   "tier": "mid",
+   "capabilities": [
+    "text"
+   ],
+   "family": "bedrock"
+  },
+  "openai/gpt-5.2-codex": {
+   "tier": "mid",
+   "capabilities": [
+    "text"
+   ],
+   "family": "freeaiapikey"
+  },
+  "openai/gpt-oss-safeguard-20b": {
+   "tier": "mid",
+   "capabilities": [
+    "text"
+   ],
+   "family": "groq"
+  },
+  "openrouter_deepseek_r1": {
+   "tier": "mid",
+   "capabilities": [
+    "text"
+   ],
+   "family": "theoldllm"
+  },
+  "openrouter_gpt_4_o": {
+   "tier": "mid",
+   "capabilities": [
+    "text"
+   ],
+   "family": "theoldllm"
+  },
+  "openrouter_gpt_4_o_mini": {
+   "tier": "lite",
+   "capabilities": [
+    "text"
+   ],
+   "family": "theoldllm"
+  },
+  "openrouter_grok_4": {
+   "tier": "mid",
+   "capabilities": [
+    "text"
+   ],
+   "family": "theoldllm"
+  },
+  "opus4.5": {
+   "tier": "mid",
+   "capabilities": [
+    "text"
+   ],
+   "context_length": 200000,
+   "family": "auggie"
+  },
+  "opus4.6": {
+   "tier": "mid",
+   "capabilities": [
+    "text"
+   ],
+   "context_length": 200000,
+   "family": "auggie"
+  },
+  "opus4.6-500k": {
+   "tier": "mid",
+   "capabilities": [
+    "text"
+   ],
+   "context_length": 500000,
+   "family": "auggie"
+  },
+  "opus4.7": {
+   "tier": "mid",
+   "capabilities": [
+    "text"
+   ],
+   "context_length": 200000,
+   "family": "auggie"
+  },
+  "opus4.7-500k": {
+   "tier": "mid",
+   "capabilities": [
+    "text"
+   ],
+   "context_length": 500000,
+   "family": "auggie"
+  },
+  "opus4.8": {
+   "tier": "mid",
+   "capabilities": [
+    "text"
+   ],
+   "context_length": 200000,
+   "family": "auggie"
+  },
+  "oswe-vscode-prime": {
+   "tier": "mid",
+   "capabilities": [
+    "text"
+   ],
+   "context_length": 264000,
+   "family": "ghe-copilot"
+  },
+  "palmyra-x4": {
+   "tier": "mid",
+   "capabilities": [
+    "text"
+   ],
+   "context_length": 131072,
+   "family": "writer"
+  },
+  "palmyra-x5": {
+   "tier": "mid",
+   "capabilities": [
+    "text"
+   ],
+   "context_length": 1048576,
+   "family": "writer"
+  },
+  "pepper-1": {
+   "tier": "mid",
+   "capabilities": [
+    "text"
+   ],
+   "family": "chipotle"
+  },
+  "perplexity-fast": {
+   "tier": "mid",
+   "capabilities": [
+    "text"
+   ],
+   "family": "pollinations"
+  },
+  "perplexity-reasoning": {
+   "tier": "mid",
+   "capabilities": [
+    "reasoning",
+    "text"
+   ],
+   "family": "pollinations"
+  },
+  "perplexity/sonar": {
+   "tier": "mid",
+   "capabilities": [
+    "text"
+   ],
+   "family": "puter"
+  },
+  "perplexity/sonar-deep-research": {
+   "tier": "mid",
+   "capabilities": [
+    "text"
+   ],
+   "family": "puter"
+  },
+  "perplexity/sonar-pro": {
+   "tier": "top",
+   "capabilities": [
+    "text"
+   ],
+   "family": "puter"
+  },
+  "perplexity/sonar-pro-search": {
+   "tier": "top",
+   "capabilities": [
+    "text"
+   ],
+   "family": "puter"
+  },
+  "perplexity/sonar-reasoning-pro": {
+   "tier": "top",
+   "capabilities": [
+    "reasoning",
+    "text"
+   ],
+   "family": "puter"
+  },
+  "phoenix": {
+   "tier": "mid",
+   "capabilities": [
+    "text"
+   ],
+   "family": "leonardo"
+  },
+  "plamo-3.0-prime": {
+   "tier": "mid",
+   "capabilities": [
+    "text"
+   ],
+   "context_length": 262144,
+   "family": "plamo"
+  },
+  "polly": {
+   "tier": "mid",
+   "capabilities": [
+    "text"
+   ],
+   "family": "pollinations"
+  },
+  "poolside/laguna-m.1:free": {
+   "tier": "mid",
+   "capabilities": [
+    "reasoning"
+   ],
+   "context_length": 262144,
+   "family": "cline"
+  },
+  "prism-a": {
+   "tier": "mid",
+   "capabilities": [
+    "text"
+   ],
+   "context_length": 200000,
+   "family": "auggie"
+  },
+  "prism-b": {
+   "tier": "mid",
+   "capabilities": [
+    "text"
+   ],
+   "context_length": 200000,
+   "family": "auggie"
+  },
+  "pro-128k": {
+   "tier": "top",
+   "capabilities": [
+    "text"
+   ],
+   "context_length": 131072,
+   "family": "iflytek"
+  },
+  "qwen-coder": {
+   "tier": "mid",
+   "capabilities": [
+    "text"
+   ],
+   "family": "pollinations"
+  },
+  "qwen-coder-large": {
+   "tier": "top",
+   "capabilities": [
+    "text"
+   ],
+   "family": "pollinations"
+  },
+  "qwen-large": {
+   "tier": "top",
+   "capabilities": [
+    "text"
+   ],
+   "family": "pollinations"
+  },
+  "qwen-max": {
+   "tier": "top",
+   "capabilities": [
+    "text"
+   ],
+   "family": "bluesminds"
+  },
+  "qwen-plus": {
+   "tier": "mid",
+   "capabilities": [
+    "text"
+   ],
+   "family": "bluesminds"
+  },
+  "qwen-safety": {
+   "tier": "mid",
+   "capabilities": [
+    "text"
+   ],
+   "family": "pollinations"
+  },
+  "qwen-turbo": {
+   "tier": "mid",
+   "capabilities": [
+    "text"
+   ],
+   "family": "bluesminds"
+  },
+  "qwen-vision": {
+   "tier": "mid",
+   "capabilities": [
+    "text",
+    "vision"
+   ],
+   "family": "pollinations"
+  },
+  "qwen/qwen3-next-80b-a3b-instruct": {
+   "tier": "mid",
+   "capabilities": [
+    "reasoning"
+   ],
+   "family": "nvidia"
+  },
+  "qwen3-235b": {
+   "tier": "top",
+   "capabilities": [
+    "reasoning"
+   ],
+   "family": "t3-web"
+  },
+  "qwen3-235b-a22b-instruct-2507": {
+   "tier": "top",
+   "capabilities": [
+    "text"
+   ],
+   "family": "scaleway"
+  },
+  "qwen3-coder-next": {
+   "tier": "mid",
+   "capabilities": [
+    "text"
+   ],
+   "family": "kiro"
+  },
+  "qwen3.5:397b": {
+   "tier": "mid",
+   "capabilities": [
+    "text"
+   ],
+   "family": "ollama-cloud"
+  },
+  "qwen3.6-flash": {
+   "tier": "mid",
+   "capabilities": [
+    "reasoning",
+    "vision"
+   ],
+   "context_length": 1,
+   "family": "qwen-cloud-token-plan"
+  },
+  "qwen3.6:27b": {
+   "tier": "mid",
+   "capabilities": [
+    "text"
+   ],
+   "family": "uncloseai"
+  },
+  "qwen3.8-max-preview": {
+   "tier": "top",
+   "capabilities": [
+    "reasoning",
+    "vision"
+   ],
+   "context_length": 1,
+   "family": "qoder"
+  },
+  "qwen3p6-plus": {
+   "tier": "mid",
+   "capabilities": [
+    "text"
+   ],
+   "family": "fireworks"
+  },
+  "reka-edge-2603": {
+   "tier": "mid",
+   "capabilities": [
+    "text"
+   ],
+   "family": "reka"
+  },
+  "reka-flash": {
+   "tier": "mid",
+   "capabilities": [
+    "text"
+   ],
+   "family": "reka"
+  },
+  "reka-flash-3": {
+   "tier": "mid",
+   "capabilities": [
+    "text"
+   ],
+   "family": "reka"
+  },
+  "sapiens-ai/agnes-1.5-lite": {
+   "tier": "lite",
+   "capabilities": [
+    "text"
+   ],
+   "family": "zenmux-free"
+  },
+  "sapiens-ai/agnes-1.5-pro": {
+   "tier": "top",
+   "capabilities": [
+    "text"
+   ],
+   "family": "zenmux-free"
+  },
+  "sarvam-105b": {
+   "tier": "mid",
+   "capabilities": [
+    "text"
+   ],
+   "context_length": 131072,
+   "family": "sarvam"
+  },
+  "sarvam-30b": {
+   "tier": "mid",
+   "capabilities": [
+    "text"
+   ],
+   "context_length": 65536,
+   "family": "sarvam"
+  },
+  "sarvamai/sarvam-m": {
+   "tier": "mid",
+   "capabilities": [
+    "text"
+   ],
+   "family": "nvidia"
+  },
+  "sdxl": {
+   "tier": "mid",
+   "capabilities": [
+    "image"
+   ],
+   "family": "leonardo"
+  },
+  "seed-2.0": {
+   "tier": "mid",
+   "capabilities": [
+    "text"
+   ],
+   "family": "byteplus"
+  },
+  "seedance": {
+   "tier": "mid",
+   "capabilities": [
+    "text"
+   ],
+   "family": "veoaifree-web"
+  },
+  "sonnet4.5": {
+   "tier": "mid",
+   "capabilities": [
+    "text"
+   ],
+   "context_length": 200000,
+   "family": "auggie"
+  },
+  "sonnet4.6": {
+   "tier": "mid",
+   "capabilities": [
+    "text"
+   ],
+   "context_length": 200000,
+   "family": "auggie"
+  },
+  "sonnet4.6-500k": {
+   "tier": "mid",
+   "capabilities": [
+    "text"
+   ],
+   "context_length": 500000,
+   "family": "auggie"
+  },
+  "sonnet5-500k": {
+   "tier": "mid",
+   "capabilities": [
+    "text"
+   ],
+   "context_length": 500000,
+   "family": "auggie"
+  },
+  "sonnet5-high": {
+   "tier": "mid",
+   "capabilities": [
+    "text"
+   ],
+   "context_length": 200000,
+   "family": "auggie"
+  },
+  "step-1o-turbo-vision": {
+   "tier": "mid",
+   "capabilities": [
+    "text",
+    "vision"
+   ],
+   "context_length": 32768,
+   "family": "stepfun"
+  },
+  "step-1v": {
+   "tier": "mid",
+   "capabilities": [
+    "text"
+   ],
+   "family": "stepfun"
+  },
+  "step-3.5-flash": {
+   "tier": "mid",
+   "capabilities": [
+    "text"
+   ],
+   "context_length": 262144,
+   "family": "stepfun"
+  },
+  "step-3.5-flash-2603": {
+   "tier": "mid",
+   "capabilities": [
+    "text"
+   ],
+   "context_length": 262144,
+   "family": "stepfun"
+  },
+  "step-3.7-flash": {
+   "tier": "mid",
+   "capabilities": [
+    "text"
+   ],
+   "context_length": 262144,
+   "family": "stepfun"
+  },
+  "stepfun/step-3.5-flash-free": {
+   "tier": "mid",
+   "capabilities": [
+    "text"
+   ],
+   "family": "zenmux-free"
+  },
+  "stockmark/stockmark-2-100b-instruct": {
+   "tier": "mid",
+   "capabilities": [
+    "text"
+   ],
+   "family": "nvidia"
+  },
+  "swe-1.5": {
+   "tier": "mid",
+   "capabilities": [
+    "text"
+   ],
+   "family": "windsurf"
+  },
+  "swe-1.5-fast": {
+   "tier": "mid",
+   "capabilities": [
+    "text"
+   ],
+   "family": "windsurf"
+  },
+  "swe-1.6": {
+   "tier": "mid",
+   "capabilities": [
+    "text"
+   ],
+   "family": "windsurf"
+  },
+  "swe-1.6-fast": {
+   "tier": "mid",
+   "capabilities": [
+    "text"
+   ],
+   "family": "windsurf"
+  },
+  "tencent/hy3:free": {
+   "tier": "mid",
+   "capabilities": [
+    "reasoning"
+   ],
+   "context_length": 262144,
+   "family": "cline"
+  },
+  "tinfoil/gemma4-31b": {
+   "tier": "mid",
+   "capabilities": [
+    "text"
+   ],
+   "family": "duckduckgo-web"
+  },
+  "together_deepseek_v3": {
+   "tier": "mid",
+   "capabilities": [
+    "text"
+   ],
+   "family": "theoldllm"
+  },
+  "typhoon-v2.5-30b-a3b-instruct": {
+   "tier": "mid",
+   "capabilities": [
+    "text"
+   ],
+   "context_length": 131072,
+   "family": "typhoon"
+  },
+  "udio-default": {
+   "tier": "mid",
+   "capabilities": [
+    "text"
+   ],
+   "family": "udio"
+  },
+  "upstage/solar-10.7b-instruct": {
+   "tier": "mid",
+   "capabilities": [
+    "text"
+   ],
+   "family": "nvidia"
+  },
+  "veo": {
+   "tier": "mid",
+   "capabilities": [
+    "text"
+   ],
+   "family": "veoaifree-web"
+  },
+  "work": {
+   "tier": "mid",
+   "capabilities": [
+    "text"
+   ],
+   "family": "trae"
+  },
+  "x-ai/grok-2-1212": {
+   "tier": "mid",
+   "capabilities": [
+    "text"
+   ],
+   "context_length": 131072,
+   "family": "api-airforce"
+  },
+  "x-ai/grok-4.1-fast": {
+   "tier": "mid",
+   "capabilities": [
+    "reasoning"
+   ],
+   "context_length": 131072,
+   "family": "zenmux"
+  },
+  "yi-large": {
+   "tier": "top",
+   "capabilities": [
+    "text"
+   ],
+   "family": "yi"
+  },
+  "z-ai/glm-4.6v-flash": {
+   "tier": "mid",
+   "capabilities": [
+    "vision"
+   ],
+   "context_length": 128000,
+   "family": "zenmux"
+  },
+  "z-ai/glm-4.7-flash-free": {
+   "tier": "mid",
+   "capabilities": [
+    "text"
+   ],
+   "family": "zenmux-free"
+  },
+  "zai-glm-4.7": {
+   "tier": "mid",
+   "capabilities": [
+    "text"
+   ],
+   "family": "cerebras"
+  }
+ },
+ "rules": [
+  {
+   "contains": [
+    "-vl",
+    "vision",
+    "-vl-",
+    "internvl"
+   ],
+   "tier": "",
+   "capabilities": [
+    "text",
+    "vision"
+   ]
+  },
+  {
+   "contains": [
+    "think",
+    "reason",
+    "-r1",
+    "-r2"
+   ],
+   "capabilities": [
+    "text",
+    "reasoning"
+   ]
+  },
+  {
+   "contains": [
+    "embed",
+    "bge-",
+    "e5-"
+   ],
+   "capabilities": [
+    "embedding"
+   ],
+   "tier": "lite"
+  },
+  {
+   "contains": [
+    "tts",
+    "asr",
+    "whisper",
+    "audio"
+   ],
+   "capabilities": [
+    "audio"
+   ],
+   "tier": "lite"
+  },
+  {
+   "contains": [
+    "image",
+    "flux",
+    "sdxl",
+    "stable-diffusion",
+    "dall-e",
+    "seedream"
+   ],
+   "capabilities": [
+    "image"
+   ],
+   "tier": "mid"
+  },
+  {
+   "contains": [
+    "nano",
+    "mini",
+    "lite",
+    "tiny",
+    "-1b",
+    "-2b",
+    "-3b",
+    "-4b",
+    "-7b",
+    "-8b",
+    "-9b"
+   ],
+   "tier": "lite"
+  },
+  {
+   "contains": [
+    "flash",
+    "small",
+    "medium",
+    "-12b",
+    "-14b",
+    "-24b",
+    "-27b",
+    "-32b",
+    "-70b",
+    "-72b"
+   ],
+   "tier": "mid"
+  },
+  {
+   "contains": [
+    "ultra",
+    "large",
+    "pro",
+    "max",
+    "-235b",
+    "-405b",
+    "-550b",
+    "-675b"
+   ],
+   "tier": "top"
+  },
+  {
+   "contains": [
+    ":free",
+    "-free",
+    "_free"
+   ],
+   "price_in": 0,
+   "price_out": 0
+  }
+ ]
 }

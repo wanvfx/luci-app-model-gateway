@@ -59,6 +59,9 @@ start_service() {
     procd_set_param stdout 1
     procd_set_param stderr 1
     procd_set_param env "MODEL_GATEWAY_DATA=$DATA_DIR"
+    # S5：显式声明只读资源目录（htdocs / models_meta.json / models_catalog.json），
+    # 避免二进制与资源不在同目录时（ipk 布局：二进制 /usr/bin，资源 /usr/share/model-gateway）硬猜路径。
+    procd_set_param env "MODEL_GATEWAY_APP=/usr/share/model-gateway"
     procd_close_instance
 }
 
@@ -69,6 +72,16 @@ status() {
     fi
     echo "stopped"
     return 3
+}
+
+reload_service() {
+    # P1-4：显式提供 reload 入口以满足 procd 兼容，
+    # 避免 `/etc/init.d/model-gateway reload` 报 "command not found"。
+    # 网关配置在启动时一次性读入，运行时热更新由管理面写 UCI 后调用
+    # LuCI CBI 的 apply_service（restart 实例）完成；此处 reload 统一走 restart。
+    logger -t model-gateway "reload_service called, restarting instance"
+    stop
+    start
 }
 
 # 注意：不要自定义 stop() 覆盖 rc.common 默认实现。

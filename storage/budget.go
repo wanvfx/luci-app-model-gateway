@@ -2,6 +2,7 @@ package storage
 
 import (
 	"encoding/json"
+	"log"
 	"os"
 	"path/filepath"
 	"sync"
@@ -31,12 +32,13 @@ func (b *Budget) AddCost(model, provider string, promptTokens, completionTokens 
 		return 0, b.DailyTotal()
 	}
 	b.mu.Lock()
-	defer b.mu.Unlock()
 	today := time.Now().Format("2006-01-02")
 	b.data[today] += cost
 	b.cleanupLocked()
-	b.persistLocked()
-	return cost, b.data[today]
+	total := b.data[today]
+	b.mu.Unlock()
+	b.persist()
+	return cost, total
 }
 
 // DailyTotal 当日累计成本
@@ -50,12 +52,12 @@ func (b *Budget) DailyTotal() float64 {
 // BudgetStatus 预算状态
 type BudgetStatus struct {
 	DailyTotal float64 `json:"daily_total"`
-	Limit      float64 `json:"limit"`        // 0 = 不限
-	WarningPct int     `json:"warning_pct"`  // 预警阈值百分比
-	Action     string  `json:"action"`       // warn | block
-	Status     string  `json:"status"`       // ok | warn | exceeded
-	WarnAt     float64 `json:"warn_at"`      // 触发预警的额度
-	Blocked    bool    `json:"blocked"`       // 是否处于拦截状态
+	Limit      float64 `json:"limit"`       // 0 = 不限
+	WarningPct int     `json:"warning_pct"` // 预警阈值百分比
+	Action     string  `json:"action"`      // warn | block
+	Status     string  `json:"status"`      // ok | warn | exceeded
+	WarnAt     float64 `json:"warn_at"`     // 触发预警的额度
+	Blocked    bool    `json:"blocked"`     // 是否处于拦截状态
 }
 
 // Status 计算当前预算状态
@@ -107,16 +109,23 @@ func (b *Budget) load() {
 	b.mu.Unlock()
 }
 
-// persistLocked 落盘（调用方持锁）
-func (b *Budget) persistLocked() {
+// persist 落盘：锁内序列化、锁外写盘（P2-4）。调用方无需持锁。
+func (b *Budget) persist() {
 	if b.dir == "" {
 		return
 	}
-	data, err := json.Marshal(b.data)
+	b.mu.Lock()
+	data := b.data
+	b.mu.Unlock()
+	buf, err := json.Marshal(data)
 	if err != nil {
+		log.Printf("budget persist marshal failed: %v", err) // P3-4
 		return
 	}
-	_ = os.WriteFile(filepath.Join(b.dir, "budget.json"), data, 0644)
+	// P3-4: 不再吞掉写盘错误，记 error 日志便于诊断磁盘/权限问题
+	if werr := os.WriteFile(filepath.Join(b.dir, "budget.json"), buf, 0644); werr != nil {
+		log.Printf("budget persist write failed: %v", werr)
+	}
 }
 
 // cleanupLocked 删除 30 天前的旧日期（调用方持锁）

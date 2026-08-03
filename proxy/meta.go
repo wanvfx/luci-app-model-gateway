@@ -34,6 +34,13 @@ func NewMetaStore(appDir, dataDir string) *MetaStore {
 		SupportsVision:    map[string]bool{},
 	}
 
+	// 0. 环境变量资源目录（S5：MODEL_GATEWAY_APP 优先，覆盖开发/安装布局差异）
+	if env := os.Getenv("MODEL_GATEWAY_APP"); env != "" {
+		if data, err := os.ReadFile(filepath.Join(env, "models_meta.json")); err == nil {
+			ms.merge(data)
+		}
+	}
+
 	// 1. 内置版（APP_DIR/models_meta.json）
 	builtin := filepath.Join(appDir, "models_meta.json")
 	if data, err := os.ReadFile(builtin); err == nil {
